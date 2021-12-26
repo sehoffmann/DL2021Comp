@@ -45,5 +45,8 @@ def experiment_from_config(cfg):
     if experiment == 'default':
         from dlcomp.experiments.default import DefaultLoop
         return DefaultLoop(cfg)
+    elif experiment == 'groundtruth':
+        from dlcomp.experiments.groundtruth import Groundtruth
+        return Groundtruth(cfg)
     else:
         raise ValueError(f'unknown experiment {experiment}')

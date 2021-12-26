@@ -1,8 +1,8 @@
 import torch
-import numpy as np
-from torch.utils.data import dataloader
 import wandb
 import sys
+import time
+import os
 
 import dlcomp.augmentations as aug
 from dlcomp.data_handling import loaders_from_config
@@ -16,6 +16,9 @@ class DefaultLoop:
 
     def __init__(self, cfg):
         self.cfg = cfg
+
+        self.model_dir = wandb.run.dir #cfg['out_path'] + f"/run_{time.strftime('%Y-%m-%d-%H-%M-%S', time.localtime())}"
+        #os.makedirs(self.model_dir)
 
         self.train_dl, self.val_dl, self.test_dl = loaders_from_config(cfg, aug.baseline)
         self.device = cfg['device']
@@ -43,6 +46,8 @@ class DefaultLoop:
             val_loss = self.validate(self.model)
             ema_val_loss = self.validate(self.ema_model)
 
+            self.save_models()
+
             print(f"train_loss: {train_loss:>7f}\nval_loss: {val_loss:>7f}\nema_val_loss: {ema_val_loss:>7f}")
             wandb.log({'train_loss': train_loss, 'val_loss': val_loss, 'ema_val_loss': ema_val_loss, 'epoch': self.epoch, 'batch': self.batch})
             print("-" * 50)
@@ -50,7 +55,7 @@ class DefaultLoop:
             sys.stdout.flush()
             sys.stderr.flush()
 
-        infer_and_safe(self.cfg['out_path'], self.test_dl, self.model, self.device)
+        infer_and_safe(self.model_dir, self.test_dl, self.model, self.device)
         print("Done!")
             
 
@@ -97,4 +102,20 @@ class DefaultLoop:
         return val_loss / N_batches
     
 
-    
+    def save_models(self):
+        directory = self.model_dir + f'/models' 
+        os.makedirs(directory, exist_ok=True)
+
+        model_path = directory + f'/epoch{self.epoch}.pth'
+        latest_path = directory + '/latest.pth'
+
+        data =  {
+            'epoch': self.epoch,
+            'model_state_dict': self.model.state_dict(),
+            'ema_state_dict': self.ema_model.state_dict(),
+            'optim_state_dict': self.optimizer.state_dict(),
+        }
+
+        torch.save(data, model_path)
+        torch.save(data, latest_path)
+        wandb.save('models/*.pth')  # upload models as soon as possible

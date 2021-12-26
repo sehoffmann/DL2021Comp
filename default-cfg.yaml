@@ -22,7 +22,7 @@ early_stopping:
   grace: 30
 
   # minimum improvement required for an epoch to be considered better
-  min_delta: 20
+  min_delta: 15
 
 # how many percent of the training dataset to use for validation
 validation_split: 0.1

@@ -9,7 +9,7 @@ import numpy as np
 import dlcomp.augmentations as aug
 from dlcomp.data_handling import loaders_from_config
 
-from dlcomp.config import model_from_config, optimizer_from_config
+from dlcomp.config import model_from_config, optimizer_from_config, scheduler_from_config
 from dlcomp.eval import infer_and_safe
 from dlcomp.util import EarlyStopping, update_ema_model
 
@@ -33,6 +33,7 @@ class DefaultLoop:
         self.model = model_from_config(cfg['model']).to(self.device)
         self.ema_model = model_from_config(cfg['model']).to(self.device).requires_grad_(False)
         self.optimizer = optimizer_from_config(cfg['optimizer'], self.model.parameters())
+        self.scheduler = scheduler_from_config(cfg['scheduler'], self.optimizer) if 'scheduler' in cfg else None
         self.loss_fn = torch.nn.MSELoss()
 
         if wandb.run:
@@ -52,6 +53,8 @@ class DefaultLoop:
         wandb.define_metric('test/loss', step_metric='epoch')
         wandb.define_metric('test/ema_loss', step_metric='epoch')
 
+        wandb.define_metric('lr', step_metric='epoch', hidden=True)
+
         wandb.define_metric('test-images', step_metric='epoch', hidden=True)
 
 
@@ -59,7 +62,6 @@ class DefaultLoop:
         self.epoch = 0
         self.batch = 0
         early_stop = False
-        best_summary = None
         while self.epoch < self.cfg['epochs'] and not early_stop:
             self.epoch += 1
 
@@ -98,8 +100,15 @@ class DefaultLoop:
             
            
             print('\n'.join([f'{k}: {v:>7f}' for k,v in metrics.items()]))
-            metrics.update({'epoch': self.epoch, 'batch': self.batch})
+            metrics.update({'lr': self.get_lr(), 'epoch': self.epoch, 'batch': self.batch})
             wandb.log(metrics)
+
+            # Update LR
+            if self.scheduler:
+                if isinstance(self.scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau):
+                    self.scheduler.step(val_loss)
+                else:
+                    self.scheduler.step()
 
             self.save_models(is_best=new_best_model)
 
@@ -110,7 +119,15 @@ class DefaultLoop:
 
         infer_and_safe(self.model_dir, self.test_dl, self.early_stopping.best_model, self.device)
         print("Done!")
-            
+
+
+    def get_lr(self):
+        if not self.scheduler or isinstance(self.scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau):
+            pgroup = self.optimizer.param_groups[0]
+            return pgroup['lr']
+        else:
+            return self.scheduler.get_last_lr() 
+
 
     def train_epoch(self):
         N_batches = len(self.train_dl)

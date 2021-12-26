@@ -10,18 +10,26 @@ def remove_name(cfg):
     return cfg2
 
 
-def create_optimizer(name, params, **kwargs):
-    torch_optimizers = dict(inspect.getmembers(torch.optim, inspect.isclass))
+def optimizer_from_config(cfg, params):
+    kwargs = remove_name(cfg)
+    name = cfg['name']
 
+    torch_optimizers = dict(inspect.getmembers(torch.optim, inspect.isclass))
     if name in torch_optimizers:
         return torch_optimizers[name](params, **kwargs)
     else:
-        raise ValueError(f'unknown optimizer {name}')        
+        raise ValueError(f'unknown optimizer {name}')
 
 
-def optimizer_from_config(cfg, params):
+def scheduler_from_config(cfg, optimizer):
     kwargs = remove_name(cfg)
-    return create_optimizer(cfg['name'], params, **kwargs)
+    name = cfg['name']
+
+    torch_optimizers = dict(inspect.getmembers(torch.optim.lr_scheduler, inspect.isclass))
+    if name in torch_optimizers:
+        return torch_optimizers[name](optimizer, **kwargs)
+    else:
+        raise ValueError(f'unknown optimizer {name}')
 
 
 def model_from_config(cfg):

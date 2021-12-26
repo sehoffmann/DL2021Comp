@@ -30,7 +30,8 @@ def main(vargs):
     kaggle_api = KaggleApi()
     kaggle_api.authenticate()
 
-    msg = f'run: {FLAGS.run}'
+    test_loss = run.summary['best/test/ema_loss']
+    msg = f'{run.name} https://wandb.ai/sehoffmann/dlcomp/runs/{FLAGS.run} (test-loss: {test_loss:.5f})'
     kaggle_api.competition_submit(csv_path, msg, 'uni-tuebingen-deep-learning-2021')
 
 if __name__ == '__main__':

@@ -1,6 +1,7 @@
 import torch
 import copy
 
+
 def update_ema_model(model, ema_model, alpha):
     for p1, p2 in zip(model.parameters(), ema_model.parameters()):
         p2.data = alpha*p2 + (1-alpha) * p1.data
@@ -21,7 +22,7 @@ class EarlyStopping:
         if not self.best_loss or loss + self.min_delta < self.best_loss:
             self.best_loss = loss
             self.best_epoch = epoch
-            self.best_model_state = copy.deepcopy(model)
+            self.best_model = copy.deepcopy(model)
             return True
         else:
             return False

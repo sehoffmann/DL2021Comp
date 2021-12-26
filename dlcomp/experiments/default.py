@@ -22,7 +22,7 @@ class DefaultLoop:
         self.model_dir = wandb.run.dir #cfg['out_path'] + f"/run_{time.strftime('%Y-%m-%d-%H-%M-%S', time.localtime())}"
         #os.makedirs(self.model_dir)
 
-        self.train_dl, self.val_dl, self.test_dl = loaders_from_config(cfg, aug.baseline)
+        self.train_dl, self.val_dl, self.val_dl_raw, self.test_dl = loaders_from_config(cfg, aug.baseline)
         self.device = cfg['device']
         
         self.early_stopping = EarlyStopping.from_config(cfg['early_stopping'])
@@ -40,16 +40,15 @@ class DefaultLoop:
     def setup_wandb(self):
         wandb.watch(self.model)
 
-        wandb.define_metric('epoch')
-        wandb.define_metric('batch')
+        wandb.define_metric('epoch', hidden=True)
         
-        wandb.define_metric('train_loss', step_metric='epoch')
-        wandb.define_metric('val_loss', step_metric='epoch')
-        wandb.define_metric('ema_val_loss', step_metric='epoch')
-        
-        wandb.define_metric('loss', step_metric='batch')
+        wandb.define_metric('train/loss', step_metric='epoch')
+        wandb.define_metric('val/loss', step_metric='epoch')
+        wandb.define_metric('val/ema_loss', step_metric='epoch')
+        wandb.define_metric('test/loss', step_metric='epoch')
+        wandb.define_metric('test/ema_loss', step_metric='epoch')
 
-        wandb.define_metric('test-images', step_metric='epoch')
+        wandb.define_metric('test-images', step_metric='epoch', hidden=True)
 
 
     def train(self):
@@ -64,35 +63,46 @@ class DefaultLoop:
             print("-" * 50)
             
             train_loss = self.train_epoch()
-            val_loss = self.validate(self.model)
-            ema_val_loss = self.validate(self.ema_model)
+            val_loss = self.validate(self.model, self.val_dl)
+            ema_val_loss = self.validate(self.ema_model, self.val_dl)
 
-            wandb.log({'train_loss': train_loss, 'val_loss': val_loss, 'ema_val_loss': ema_val_loss, 'epoch': self.epoch, 'batch': self.batch})
-            print(f"train_loss: {train_loss:>7f}\nval_loss: {val_loss:>7f}\nema_val_loss: {ema_val_loss:>7f}")
-            
+            test_loss = self.validate(self.model, self.val_dl_raw)
+            ema_test_loss = self.validate(self.ema_model, self.val_dl_raw)
+
+            metrics = {
+                'train/loss': train_loss, 
+                'val/loss': val_loss, 
+                'val/ema_loss': ema_val_loss,
+                'test/loss': test_loss,
+                'test/ema_loss': ema_test_loss
+            }
+
             new_best_model = self.early_stopping.update(self.epoch, self.model, val_loss) 
             if new_best_model:
                 print('new best model!')
-                #wandb.run.summary['best_epoch'] = self.epoch
-                best_summary = dict(wandb.run.summary)
+                for k,v in metrics.items():
+                    wandb.run.summary['best/' + k] = v
+                wandb.run.summary['best/epoch'] = self.epoch
 
             early_stop = self.early_stopping.stop(self.epoch) 
             if early_stop:
                 print(f'no improvement since {self.early_stopping.grace_period} epochs. stopping early')
 
-            print("-" * 50)
 
             if self.epoch % self.cfg['save_every'] == 0:
                 self.log_test_images(self.model)
             
+           
+            print('\n'.join([f'{k}: {v:>7f}' for k,v in metrics.items()]))
+            metrics.update({'epoch': self.epoch, 'batch': self.batch})
+            wandb.log(metrics)
+
             self.save_models(is_best=new_best_model)
+
+            print("-" * 50)
 
             sys.stdout.flush()
             sys.stderr.flush()
-
-        # reset summary to best epoch:
-        for k,v in best_summary.items():
-            wandb.run.summary[k] = v
 
         infer_and_safe(self.model_dir, self.test_dl, self.early_stopping.best_model, self.device)
         print("Done!")
@@ -123,17 +133,16 @@ class DefaultLoop:
 
         update_ema_model(self.model, self.ema_model, self.cfg['experiment']['ema_alpha'])
 
-        wandb.log({'loss': loss, 'batch': self.batch, 'epoch': self.epoch})
         return loss
 
 
-    def validate(self, model):
+    def validate(self, model, dl):
         N_batches = len(self.val_dl)
         
         self.model.eval()
         val_loss = 0
         with torch.no_grad():
-            for X, Y in self.val_dl:
+            for X, Y in dl:
                 X, Y = X.to(self.device), Y.to(self.device)
                 pred = model(X)
                 val_loss += self.loss_fn(pred*255, Y*255).item()

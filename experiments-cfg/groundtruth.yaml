@@ -1,0 +1,13 @@
+experiment: 
+  name: groundtruth
+
+# DONT MATTER:
+
+model: 
+  name: SimpleAutoencoder
+
+optimizer:
+  name: Adam
+  lr: 0.0005
+
+batch_size: 128

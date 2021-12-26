@@ -16,7 +16,7 @@ except ImportError:
 
 
 flags.DEFINE_string('default_config', 'default-cfg.yaml', 'path to the default configuration file')
-flags.DEFINE_string('config', 'experiments-cfg/baseline.yaml', 'experiment specific configuration file')
+flags.DEFINE_string('config', 'experiments-cfg/baseline_0.yaml', 'experiment specific configuration file')
 
 
 def main(argv):

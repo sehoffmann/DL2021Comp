@@ -9,6 +9,7 @@ from dlcomp.data_handling import loaders_from_config
 
 from dlcomp.config import model_from_config, optimizer_from_config
 from dlcomp.eval import infer_and_safe
+from dlcomp.util import update_ema_model
 
 
 class DefaultLoop:
@@ -20,6 +21,7 @@ class DefaultLoop:
         self.device = cfg['device']
 
         self.model = model_from_config(cfg['model']).to(self.device)
+        self.ema_model = model_from_config(cfg['model']).to(self.device).requires_grad_(False)
         self.optimizer = optimizer_from_config(cfg['optimizer'], self.model.parameters())
         self.loss_fn = torch.nn.MSELoss()
 
@@ -38,10 +40,11 @@ class DefaultLoop:
             print("-" * 50)
             
             train_loss = self.train_epoch()
-            val_loss = self.validate()
-            
-            print(f"train_loss: {train_loss:>7f}\nval_loss: {val_loss:>7f}")
-            wandb.log({'train_loss': train_loss, 'val_loss': val_loss, 'epoch': self.epoch, 'batch': self.batch})
+            val_loss = self.validate(self.model)
+            ema_val_loss = self.validate(self.ema_model)
+
+            print(f"train_loss: {train_loss:>7f}\nval_loss: {val_loss:>7f}\nema_val_loss: {ema_val_loss:>7f}")
+            wandb.log({'train_loss': train_loss, 'val_loss': val_loss, 'ema_val_loss': ema_val_loss, 'epoch': self.epoch, 'batch': self.batch})
             print("-" * 50)
 
             sys.stdout.flush()
@@ -58,23 +61,29 @@ class DefaultLoop:
         epoch_loss= 0.0
         for _, (X, Y) in enumerate(self.train_dl):
             self.batch += 1
-            X, Y = X.to(self.device), Y.to(self.device)
-
-            pred = self.model(X)
-            loss = self.loss_fn(pred*255, Y*255)  # to be consistent with the kaggle loss.
-            
-            self.optimizer.zero_grad()
-            loss.backward()
-            self.optimizer.step()
-
-            epoch_loss += loss
-            wandb.log({'loss': loss, 'batch': self.batch, 'epoch': self.epoch})
+            epoch_loss += self.step(X,Y)
 
         mean_loss = epoch_loss/N_batches
         return mean_loss
 
 
-    def validate(self):
+    def step(self, X, Y):
+        X, Y = X.to(self.device), Y.to(self.device)
+
+        pred = self.model(X)
+        loss = self.loss_fn(pred*255, Y*255)  # to be consistent with the kaggle loss.
+        
+        self.optimizer.zero_grad()
+        loss.backward()
+        self.optimizer.step()
+
+        update_ema_model(self.model, self.ema_model, self.cfg['experiment']['ema_alpha'])
+
+        wandb.log({'loss': loss, 'batch': self.batch, 'epoch': self.epoch})
+        return loss
+
+
+    def validate(self, model):
         N_batches = len(self.val_dl)
         
         self.model.eval()
@@ -82,7 +91,7 @@ class DefaultLoop:
         with torch.no_grad():
             for X, Y in self.val_dl:
                 X, Y = X.to(self.device), Y.to(self.device)
-                pred = self.model(X)
+                pred = model(X)
                 val_loss += self.loss_fn(pred*255, Y*255).item()
         
         return val_loss / N_batches

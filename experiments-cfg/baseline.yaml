@@ -1,5 +1,6 @@
 experiment: 
   name: default
+  ema_alpha: 0.98
 
 model: 
   name: SimpleAutoencoder

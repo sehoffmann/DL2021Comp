@@ -12,7 +12,7 @@ test_path:
 
 out_path:
   desc: path to the result directory
-  value: results/
+  value: results
 
 batch_size:
   desc: minibatch size

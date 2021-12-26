@@ -19,8 +19,11 @@ class DefaultLoop:
     def __init__(self, cfg):
         self.cfg = cfg
 
-        self.model_dir = wandb.run.dir #cfg['out_path'] + f"/run_{time.strftime('%Y-%m-%d-%H-%M-%S', time.localtime())}"
-        #os.makedirs(self.model_dir)
+        if wandb.run:
+            self.model_dir = wandb.run.dir
+        else:
+            self.model_dir = cfg['out_path'] + f"/run_{time.strftime('%Y-%m-%d-%H-%M-%S', time.localtime())}"
+            os.makedirs(self.model_dir)
 
         self.train_dl, self.val_dl, self.val_dl_raw, self.test_dl = loaders_from_config(cfg, aug.baseline)
         self.device = cfg['device']
@@ -32,7 +35,8 @@ class DefaultLoop:
         self.optimizer = optimizer_from_config(cfg['optimizer'], self.model.parameters())
         self.loss_fn = torch.nn.MSELoss()
 
-        self.setup_wandb()
+        if wandb.run:
+            self.setup_wandb()
 
         print(self.model)
 
@@ -175,6 +179,15 @@ class DefaultLoop:
 
         wandb.save('models/*.pth')  # upload models as soon as possible
 
+
+    def restore(self, model_path):
+        checkpoint = torch.load(model_path)
+
+        self.epoch = checkpoint['epoch']
+        self.model.load_state_dict(checkpoint['model_state_dict'])
+        self.ema_model.load_state_dict(checkpoint['ema_state_dict'])
+        self.optimizer.load_state_dict(checkpoint['optim_state_dict'])
+        
 
     def log_test_images(self, model):
         predictions = []

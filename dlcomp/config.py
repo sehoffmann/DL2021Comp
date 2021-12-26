@@ -3,6 +3,7 @@ import inspect
 
 from dlcomp.models.autoencoder import SimpleAutoencoder
 
+
 def remove_name(cfg):
     cfg2 = dict(cfg)
     del cfg2['name']
@@ -17,6 +18,7 @@ def create_optimizer(name, params, **kwargs):
     else:
         raise ValueError(f'unknown optimizer {name}')        
 
+
 def optimizer_from_config(cfg, params):
     kwargs = remove_name(cfg)
     return create_optimizer(cfg['name'], params, **kwargs)
@@ -28,3 +30,12 @@ def model_from_config(cfg):
         return SimpleAutoencoder(**kwargs)
     else:
         raise ValueError(f'unknown model {cfg["name"]}')
+
+
+def experiment_from_config(cfg):
+    experiment = cfg['experiment']['name']
+    if experiment == 'default':
+        from dlcomp.experiments.default import DefaultLoop
+        return DefaultLoop(cfg)
+    else:
+        raise ValueError(f'unknown experiment {experiment}')

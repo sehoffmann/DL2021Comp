@@ -33,3 +33,4 @@ def infer_and_safe(outdir, dataloader, model, device):
     csv_data = np.concatenate([indices, predictions], axis=1)
     csv_file = path + ".csv"
     np.savetxt(csv_file, csv_data, delimiter=",", header='Id,Value', fmt='%d,%f')
+    return csv_file

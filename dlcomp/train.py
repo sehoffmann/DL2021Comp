@@ -5,13 +5,15 @@ import logging
 import copy
 from absl import flags, app
 
+from dlcomp.config import experiment_from_config
+
 import yaml
 try:
     from yaml import CLoader as Loader, CDumper as Dumper
 except ImportError:
     from yaml import Loader, Dumper
 
-from dlcomp.experiments.default import DefaultLoop
+
 
 flags.DEFINE_string('default_config', 'default-cfg.yaml', 'path to the default configuration file')
 flags.DEFINE_string('config', 'experiments-cfg/baseline.yaml', 'experiment specific configuration file')
@@ -48,12 +50,8 @@ def main(argv):
         torch.backends.cudnn.deterministic = True
 
     # run experiment
-    experiment = config['experiment']['name']
-    if experiment == 'default':
-        DefaultLoop(config).train()
-    else:
-        logging.critical(f'unknown experiment {experiment}')
-        return 1
+    experiment = experiment_from_config(config)
+    experiment.train()
 
 
 if __name__=="__main__":

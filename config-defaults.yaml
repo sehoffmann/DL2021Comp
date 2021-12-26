@@ -1,0 +1,43 @@
+train_clean_path:
+  desc: path to training dataset containing clean images
+  value: data/train_clean.npy
+
+train_noise_path:
+  desc: path to train dataset containing noisy images
+  value: data/train_noisy.npy
+
+test_path:
+  desc: path to the test dataset
+  value: data/test_noisy_100.npy
+
+out_path:
+  desc: path to the result directory
+  value: results/
+
+batch_size:
+  desc: minibatch size
+  value: 128
+
+epochs:
+  desc: maximum number of epochs to train
+  value: 100
+
+validation_split:
+  desc: how many percent ofthe training dataset to use for validation
+  value: 0.1
+
+seed:
+  desc: random seed to use
+  value: 1
+
+device:
+  desc: which device to use ("auto", "cpu", or "cuda")
+  value: auto
+
+deterministic_cudnn:
+  desc: if true, uses deterministic algorithms at a potential performance decrease
+  value: false
+
+io_threads:
+  desc: number of data pipeline threads
+  value: 4

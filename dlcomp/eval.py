@@ -26,7 +26,7 @@ def infer_and_safe(outdir, dataloader, model, device):
 
 
     predictions =  np.concatenate(predictions)
-    predictions *=255
+    predictions *= 255
     predictions = np.expand_dims(predictions, 1)
     
     indices = np.expand_dims(np.arange(len(predictions)), 1)

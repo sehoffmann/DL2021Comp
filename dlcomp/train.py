@@ -13,27 +13,29 @@ except ImportError:
 
 from dlcomp.experiments.default import DefaultLoop
 
-flags.DEFINE_string('default_config', 'config-defaults.yaml', 'path to the default configuration file')
+flags.DEFINE_string('default_config', 'default-cfg.yaml', 'path to the default configuration file')
 flags.DEFINE_string('config', 'experiments-cfg/baseline.yaml', 'experiment specific configuration file')
 
 
 def main(argv):
 
+    with open(flags.FLAGS.default_config, 'r') as f:
+        config = yaml.load(f, Loader)
+
     with open(flags.FLAGS.config, 'r') as f:
         exp_config = yaml.load(f, Loader)
-    
+        if exp_config:
+            config.update(exp_config)
+        else:
+            logging.warning('empty experiment config')
+        
     wandb.init(
-        project='my-test-project', 
+        project='dlcomp', 
         entity='sehoffmann',
-        config=flags.FLAGS.default_config
+        config=config,
+        tags = [], 
+        group = None
     )
-
-    if exp_config:
-        wandb.config.update(exp_config)
-    else:
-        logging.warning('empty experiment config')
-
-    config = copy.deepcopy(dict(wandb.config))
 
     if config['device'] == 'auto':
         config['device'] = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -53,14 +55,6 @@ def main(argv):
         logging.critical(f'unknown experiment {experiment}')
         return 1
 
-
-
-
-# torch.save(model.state_dict(), "model.pth")
-# print("Saved PyTorch Model State to model.pth")
-#
-# model = NeuralNetwork(width, hidden_layers)
-# model.load_state_dict(torch.load("model.pth"))
 
 if __name__=="__main__":
     app.run(main)

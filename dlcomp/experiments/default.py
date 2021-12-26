@@ -3,13 +3,15 @@ import wandb
 import sys
 import time
 import os
+import shutil
+import numpy as np
 
 import dlcomp.augmentations as aug
 from dlcomp.data_handling import loaders_from_config
 
 from dlcomp.config import model_from_config, optimizer_from_config
 from dlcomp.eval import infer_and_safe
-from dlcomp.util import update_ema_model
+from dlcomp.util import EarlyStopping, update_ema_model
 
 
 class DefaultLoop:
@@ -22,21 +24,40 @@ class DefaultLoop:
 
         self.train_dl, self.val_dl, self.test_dl = loaders_from_config(cfg, aug.baseline)
         self.device = cfg['device']
+        
+        self.early_stopping = EarlyStopping.from_config(cfg['early_stopping'])
 
         self.model = model_from_config(cfg['model']).to(self.device)
         self.ema_model = model_from_config(cfg['model']).to(self.device).requires_grad_(False)
         self.optimizer = optimizer_from_config(cfg['optimizer'], self.model.parameters())
         self.loss_fn = torch.nn.MSELoss()
 
+        self.setup_wandb()
+
         print(self.model)
 
 
-    def train(self):
+    def setup_wandb(self):
         wandb.watch(self.model)
 
+        wandb.define_metric('epoch')
+        wandb.define_metric('batch')
+        
+        wandb.define_metric('train_loss', step_metric='epoch')
+        wandb.define_metric('val_loss', step_metric='epoch')
+        wandb.define_metric('ema_val_loss', step_metric='epoch')
+        
+        wandb.define_metric('loss', step_metric='batch')
+
+        wandb.define_metric('test-images', step_metric='epoch')
+
+
+    def train(self):
         self.epoch = 0
         self.batch = 0
-        while self.epoch < self.cfg['epochs']:
+        early_stop = False
+        best_summary = None
+        while self.epoch < self.cfg['epochs'] and not early_stop:
             self.epoch += 1
 
             print(f"Epoch {self.epoch}")
@@ -46,16 +67,34 @@ class DefaultLoop:
             val_loss = self.validate(self.model)
             ema_val_loss = self.validate(self.ema_model)
 
-            self.save_models()
-
-            print(f"train_loss: {train_loss:>7f}\nval_loss: {val_loss:>7f}\nema_val_loss: {ema_val_loss:>7f}")
             wandb.log({'train_loss': train_loss, 'val_loss': val_loss, 'ema_val_loss': ema_val_loss, 'epoch': self.epoch, 'batch': self.batch})
+            print(f"train_loss: {train_loss:>7f}\nval_loss: {val_loss:>7f}\nema_val_loss: {ema_val_loss:>7f}")
+            
+            new_best_model = self.early_stopping.update(self.epoch, self.model, val_loss) 
+            if new_best_model:
+                print('new best model!')
+                #wandb.run.summary['best_epoch'] = self.epoch
+                best_summary = dict(wandb.run.summary)
+
+            early_stop = self.early_stopping.stop(self.epoch) 
+            if early_stop:
+                print(f'no improvement since {self.early_stopping.grace_period} epochs. stopping early')
+
             print("-" * 50)
+
+            if self.epoch % self.cfg['save_every'] == 0:
+                self.log_test_images(self.model)
+            
+            self.save_models(is_best=new_best_model)
 
             sys.stdout.flush()
             sys.stderr.flush()
 
-        infer_and_safe(self.model_dir, self.test_dl, self.model, self.device)
+        # reset summary to best epoch:
+        for k,v in best_summary.items():
+            wandb.run.summary[k] = v
+
+        infer_and_safe(self.model_dir, self.test_dl, self.early_stopping.best_model, self.device)
         print("Done!")
             
 
@@ -100,14 +139,15 @@ class DefaultLoop:
                 val_loss += self.loss_fn(pred*255, Y*255).item()
         
         return val_loss / N_batches
-    
 
-    def save_models(self):
+
+    def save_models(self, is_best=False):
         directory = self.model_dir + f'/models' 
         os.makedirs(directory, exist_ok=True)
 
         model_path = directory + f'/epoch{self.epoch}.pth'
         latest_path = directory + '/latest.pth'
+        best_path = directory + '/best.pth'
 
         data =  {
             'epoch': self.epoch,
@@ -116,6 +156,24 @@ class DefaultLoop:
             'optim_state_dict': self.optimizer.state_dict(),
         }
 
-        torch.save(data, model_path)
         torch.save(data, latest_path)
+
+        if self.epoch % self.cfg['save_every'] == 0:
+            torch.save(data, model_path)
+        
+        if is_best:
+            torch.save(data, best_path)
+
         wandb.save('models/*.pth')  # upload models as soon as possible
+
+
+    def log_test_images(self, model):
+        predictions = []
+        for i, (X, Y) in enumerate(self.test_dl):
+            X = X.to(self.device)
+            preds = model(X).detach().cpu().numpy()
+            predictions += [preds]
+
+        imgs = np.moveaxis(np.concatenate(predictions), 1, -1)
+        test_images = [wandb.Image(img) for img in imgs]
+        wandb.log({'test-images': test_images, 'epoch': self.epoch}, commit=False)

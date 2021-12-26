@@ -1,0 +1,43 @@
+# path to training dataset containing clean images, i.e. labels
+train_clean_path: data/train_clean.npy
+
+# path to train dataset containing noisy images
+train_noise_path: data/train_noisy.npy
+
+# path to the test dataset
+test_path: data/test_noisy_100.npy
+
+# path to the result directory
+out_path: results
+
+
+# minibatch size
+batch_size: 128 
+
+# maximum number of epochs to train
+epochs: 1000
+
+early_stopping:
+  # how many epochs to wait for a better loss
+  grace: 30
+
+  # minimum improvement required for an epoch to be considered better
+  min_delta: 50
+
+# how many percent of the training dataset to use for validation
+validation_split: 0.1
+
+# random seed to use
+seed: 1122334455
+
+# which device to use ("auto", "cpu", or "cuda")
+device: auto
+
+# if true, uses deterministic algorithms at a potential performance decrease
+deterministic_cudnn: false
+
+# number of data pipeline threads
+io_threads: 4
+
+# save model every n epochs
+save_every: 5

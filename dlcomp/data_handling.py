@@ -46,7 +46,7 @@ def get_train_loaders(noisy_path, label_path, transform, val_split, batch_size, 
     )
 
     train_dl = DataLoader(train_set, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers)
-    eval_dl = DataLoader(eval_set, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers)
+    eval_dl = DataLoader(eval_set, batch_size=batch_size, shuffle=False, num_workers=num_workers)
 
     return train_dl, eval_dl
 

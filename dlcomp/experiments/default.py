@@ -106,7 +106,7 @@ class DefaultLoop:
             # Update LR
             if self.scheduler:
                 if isinstance(self.scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau):
-                    self.scheduler.step(val_loss)
+                    self.scheduler.step(train_loss)
                 else:
                     self.scheduler.step()
 

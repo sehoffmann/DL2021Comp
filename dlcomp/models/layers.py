@@ -48,6 +48,26 @@ class ConvBnAct(nn.Module):
         return out
 
 
+class SelfAttention2D(nn.Module):
+
+    def __init__(self, in_c, H, W, num_heads):
+        super(SelfAttention2D, self).__init__()
+
+        self.shape = (in_c, H, W)
+        self.attention = nn.MultiheadAttention(in_c, num_heads=num_heads, batch_first=True)
+
+    def forward(self, x):
+        
+        out = torch.flatten(x, start_dim=2)
+        out = out.permute(0, 2, 1)
+        out, _ = self.attention(out, out, out, need_weights=False)
+        out = out.permute(0, 2, 1)
+
+        C, H, W = self.shape
+        out = out.reshape(-1, C, H, W)
+        return out
+
+
 class UpsamplingConv(nn.Module):
 
     def __init__(self, in_c, out_c, kernel, activation, bn=True, track_running_stats=True):

@@ -1,6 +1,6 @@
 import torch
 from torch import nn
-from .layers import ConvBnAct, LinearBnAct, UpsamplingConv
+from .layers import ConvBnAct, LinearBnAct, UpsamplingConv, SelfAttention2D
 
 class SimpleAutoencoder(nn.Module):
 
@@ -58,13 +58,15 @@ class Autoencoder(nn.Module):
         self.grayscale = kwargs.pop('grayscale')
         layers = kwargs.pop('layers')
         bottleneck_dim = kwargs.pop('bottleneck_dim')
+        attention = kwargs.pop('attention')
 
         in_c = 3
         out_c = 1 if self.grayscale else 3
 
         # Input Shape: 3 x 96 x 96
+        size = 96
         n_layers = len(layers)
-        self.hidden_res = 96 // (2**n_layers)
+        self.hidden_res = size // (2**n_layers)
         self.hidden_dim = layers[-1]
         self.hidden_features = self.hidden_dim * self.hidden_res * self.hidden_res
 
@@ -72,10 +74,13 @@ class Autoencoder(nn.Module):
         # Encoder
         last_channels = in_c
         self.encoders = nn.ModuleList()
-        for n_channels in layers:
-            layer = self.conv_bn_act(last_channels, n_channels, stride=2)
+        for i, n_channels in enumerate(layers):
+            use_attention = (i+1 == n_layers) and attention
+            layer = self.encoder_layer(last_channels, n_channels, size,size, attention=use_attention)
             self.encoders.append(layer)
+            
             last_channels = n_channels
+            size = size // 2
 
         # Bottleneck
         self.bottleneck = nn.Sequential(
@@ -105,9 +110,9 @@ class Autoencoder(nn.Module):
             enc_outputs.append(out)
         
         # Bottleneck
-        out = out.view(-1, self.hidden_features)
+        out = out.reshape(-1, self.hidden_features)
         out = self.bottleneck(out)
-        out = out.view(-1, self.hidden_dim, self.hidden_res, self.hidden_res)
+        out = out.reshape(-1, self.hidden_dim, self.hidden_res, self.hidden_res)
 
         # Decoder
         for i, dec_layer in enumerate(self.decoders):
@@ -122,6 +127,15 @@ class Autoencoder(nn.Module):
             out = out.repeat(1,3,1,1)
 
         return out
+
+    def encoder_layer(self, in_c, out_c, H, W, attention=False):
+        if attention:
+            return nn.Sequential(
+                self.conv_bn_act(in_c, out_c, stride=2),
+                SelfAttention2D(out_c, H//2, W//2, 2)
+            )
+        else:
+            return self.conv_bn_act(in_c, out_c, stride=2)
 
 
     def upsample_conv(self, in_c, out_c, kernel=None):

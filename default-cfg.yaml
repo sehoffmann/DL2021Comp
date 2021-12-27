@@ -19,7 +19,7 @@ epochs: 1000
 
 early_stopping:
   # how many epochs to wait for a better loss
-  grace: 30
+  grace: 100
 
   # minimum improvement required for an epoch to be considered better
   min_delta: 15
@@ -37,7 +37,7 @@ device: auto
 deterministic_cudnn: false
 
 # number of data pipeline threads
-io_threads: 4
+io_threads: 12
 
 # save model every n epochs
-save_every: 5
+save_every: 20

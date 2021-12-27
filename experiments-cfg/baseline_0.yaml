@@ -5,6 +5,8 @@ experiment:
 model: 
   name: SimpleAutoencoder
 
+augmentation: baseline
+
 optimizer:
   name: Adam
   lr: 0.0005

@@ -9,7 +9,7 @@ import numpy as np
 import dlcomp.augmentations as aug
 from dlcomp.data_handling import loaders_from_config
 
-from dlcomp.config import model_from_config, optimizer_from_config, scheduler_from_config
+from dlcomp.config import augmentation_from_config, model_from_config, optimizer_from_config, scheduler_from_config
 from dlcomp.eval import infer_and_safe
 from dlcomp.util import EarlyStopping, update_ema_model
 
@@ -25,7 +25,8 @@ class DefaultLoop:
             self.model_dir = cfg['out_path'] + f"/run_{time.strftime('%Y-%m-%d-%H-%M-%S', time.localtime())}"
             os.makedirs(self.model_dir)
 
-        self.train_dl, self.val_dl, self.val_dl_raw, self.test_dl = loaders_from_config(cfg, aug.baseline)
+        augmentation = augmentation_from_config(cfg['augmentation'])
+        self.train_dl, self.val_dl, self.val_dl_raw, self.test_dl = loaders_from_config(cfg, augmentation)
         self.device = cfg['device']
         
         self.early_stopping = EarlyStopping.from_config(cfg['early_stopping'])

@@ -2,7 +2,7 @@ import torch
 import inspect
 
 from dlcomp.models.autoencoder import SimpleAutoencoder
-
+import dlcomp.augmentations as aug
 
 def remove_name(cfg):
     cfg2 = dict(cfg)
@@ -50,3 +50,12 @@ def experiment_from_config(cfg):
         return Groundtruth(cfg)
     else:
         raise ValueError(f'unknown experiment {experiment}')
+
+
+def augmentation_from_config(name):
+    if name == 'baseline':
+        return aug.baseline
+    elif name == 'weak':
+        return aug.weak
+    else:
+        raise ValueError(f'unknown augmentation {name}')

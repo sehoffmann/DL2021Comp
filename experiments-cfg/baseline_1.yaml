@@ -6,6 +6,8 @@ model:
   name: SimpleAutoencoder
   single_channel: False
 
+augmentation: weak
+
 optimizer:
   name: Adam
   lr: 0.002

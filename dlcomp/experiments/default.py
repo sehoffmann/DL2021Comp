@@ -84,7 +84,7 @@ class DefaultLoop:
                 'test/ema_loss': ema_test_loss
             }
 
-            new_best_model = self.early_stopping.update(self.epoch, self.model, val_loss) 
+            new_best_model = self.early_stopping.update(self.epoch, self.model, ema_val_loss) 
             if new_best_model:
                 print('new best model!')
                 for k,v in metrics.items():

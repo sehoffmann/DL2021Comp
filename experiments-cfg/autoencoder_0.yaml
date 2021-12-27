@@ -3,15 +3,24 @@ experiment:
   ema_alpha: 0.98
 
 model: 
-  name: SimpleAutoencoder
-  single_channel: False
+  name: Autoencoder
+  layers:
+    - 32
+    - 64
+    - 64
+  bottleneck_dim: 128
+  skip_connections: True
+  activation: ReLU
+  bn: True
+  grayscale: False
+
 
 augmentation: weak2
 
 optimizer:
   name: Adam
   lr: 0.002
-  #weight_decay: 0.001
+  weight_decay: 0.0001
 
 scheduler:
   name: ReduceLROnPlateau
@@ -23,4 +32,4 @@ scheduler:
   verbose: True
   
 
-batch_size: 128
+batch_size: 256

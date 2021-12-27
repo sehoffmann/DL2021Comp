@@ -1,8 +1,9 @@
 import torch
+from torch import nn
 import inspect
 
-from dlcomp.models.autoencoder import SimpleAutoencoder
 import dlcomp.augmentations as aug
+
 
 def remove_name(cfg):
     cfg2 = dict(cfg)
@@ -34,8 +35,13 @@ def scheduler_from_config(cfg, optimizer):
 
 def model_from_config(cfg):
     kwargs = remove_name(cfg)
+    name = cfg['name']
     if cfg['name'] == 'SimpleAutoencoder':
+        from dlcomp.models.autoencoder import SimpleAutoencoder
         return SimpleAutoencoder(**kwargs)
+    elif name == 'Autoencoder':
+        from dlcomp.models.autoencoder import Autoencoder
+        return Autoencoder(**kwargs)
     else:
         raise ValueError(f'unknown model {cfg["name"]}')
 
@@ -54,3 +60,28 @@ def experiment_from_config(cfg):
 
 def augmentation_from_config(name):
     return aug.augmentations[name]()
+
+
+def activation_from_config(cfg):
+    if cfg is None:
+        return nn.Identity()
+
+    if not isinstance(cfg, str):
+        name = cfg['name']
+        kwargs = remove_name(cfg)
+    else:
+        name = cfg
+        kwargs = {}
+
+    if name == 'ReLU':
+        return nn.ReLU(**kwargs)
+    elif name == 'ELU':
+        return nn.ELU(**kwargs)
+    elif name == 'SELU':
+        return nn.SELU(**kwargs)
+    elif name == 'SiLU':  # swish
+        return nn.SiLU(**kwargs)
+    elif name == 'GELU':
+        return nn.GELU(**kwargs)
+    else:
+        raise ValueError(f'unknown activation function {name}')

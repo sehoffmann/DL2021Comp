@@ -53,9 +53,4 @@ def experiment_from_config(cfg):
 
 
 def augmentation_from_config(name):
-    if name == 'baseline':
-        return aug.baseline
-    elif name == 'weak':
-        return aug.weak
-    else:
-        raise ValueError(f'unknown augmentation {name}')
+    return aug.augmentations[name]()

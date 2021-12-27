@@ -6,12 +6,12 @@ model:
   name: SimpleAutoencoder
   single_channel: False
 
-augmentation: weak
+augmentation: weak2
 
 optimizer:
   name: Adam
   lr: 0.002
-  weight_decay: 0.001
+  #weight_decay: 0.001
 
 scheduler:
   name: ReduceLROnPlateau

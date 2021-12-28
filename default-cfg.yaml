@@ -37,7 +37,7 @@ device: auto
 deterministic_cudnn: false
 
 # number of data pipeline threads
-io_threads: 12
+io_threads: 8
 
 # save model every n epochs
 save_every: 20

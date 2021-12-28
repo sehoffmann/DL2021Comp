@@ -77,7 +77,8 @@ def get_train_loaders(noisy_path, label_path, transform, val_split, batch_size, 
         shuffle=shuffle, 
         num_workers=num_workers,
         persistent_workers=True,
-        pin_memory=True
+        pin_memory=True,
+        prefetch_factor=2,
     )
 
     val_dl = DataLoader(
@@ -86,7 +87,8 @@ def get_train_loaders(noisy_path, label_path, transform, val_split, batch_size, 
         shuffle=False, 
         num_workers=num_workers,
         persistent_workers=True,
-        pin_memory=True
+        pin_memory=True,
+        prefetch_factor=2,
     )
 
     val_dl_raw = DataLoader(
@@ -95,7 +97,8 @@ def get_train_loaders(noisy_path, label_path, transform, val_split, batch_size, 
         shuffle=False,
         num_workers=num_workers,
         persistent_workers=True,
-        pin_memory=True
+        pin_memory=True,
+        prefetch_factor=2,
     )
 
     return train_dl, val_dl, val_dl_raw
@@ -110,7 +113,8 @@ def get_test_loaders(path, transform, batch_size, shuffle, num_workers):
         shuffle=shuffle, 
         num_workers=num_workers,
         persistent_workers=True,
-        pin_memory=True
+        pin_memory=True,
+        prefetch_factor=2,
     )
 
     return dl

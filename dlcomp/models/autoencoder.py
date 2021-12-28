@@ -112,7 +112,7 @@ class EncoderBlock(nn.Module):
 
 class DecoderBlock(nn.Module):
 
-    def __init__(self, features, out_c, n_layers, kernel, activation, residual=True, bn=True):
+    def __init__(self, features, out_c, n_layers, kernel, activation, residual=True, bn=True, use_skip_convs=True):
         super(DecoderBlock, self).__init__()
 
         self.layers = nn.ModuleList()
@@ -140,12 +140,31 @@ class DecoderBlock(nn.Module):
             
             self.layers.append(layer)
 
+        if use_skip_convs:
+            self.skip_convs = nn.ModuleList()
+            for i in range(n_layers):
+                layer = conv_bn_act(
+                    features,
+                    features,
+                    kernel,
+                    stride=1,
+                    activation=activation,
+                    residual=residual,
+                    bn=bn
+                )
+                self.skip_convs.append(layer)
+        else:
+            self.skip_convs = None
+
 
     def forward(self, x, skip_cons):
         out = x
         for i, layer in enumerate(self.layers):
             if skip_cons:
-                out = out + skip_cons[i]
+                s = skip_cons[i]
+                if self.skip_convs:
+                    s = self.skip_convs[i](s)
+                out = out + s
             out = layer(out)
 
         return out
@@ -167,6 +186,7 @@ class Autoencoder(nn.Module):
         blocks = kwargs.pop('blocks')
         layers_per_block = kwargs.pop('layers_per_block')
 
+        use_skip_convs = kwargs.pop('use_skip_convs')
         bottleneck_dim = kwargs.pop('bottleneck_dim')
 
         in_c = 3
@@ -212,6 +232,7 @@ class Autoencoder(nn.Module):
                 layers_per_block,
                 self.kernel,
                 self.activation,
+                use_skip_convs=use_skip_convs,
                 residual=self.residual,
                 bn=self.bn
             )

@@ -12,6 +12,7 @@ model:
   layers_per_block: 1
   bottleneck_dim: 512
   skip_connections: True
+  use_skip_convs: False
   residual: True
 
   activation: ReLU

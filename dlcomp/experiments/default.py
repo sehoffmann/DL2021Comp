@@ -13,7 +13,7 @@ from dlcomp.data_handling import loaders_from_config
 from dlcomp.config import augmentation_from_config, model_from_config, optimizer_from_config, scheduler_from_config
 from dlcomp.eval import infer_and_safe
 from dlcomp.util import EarlyStopping, update_ema_model
-
+from dlcomp.losses import KaggleLoss
 
 class DefaultLoop:
 
@@ -36,7 +36,9 @@ class DefaultLoop:
         self.ema_model = model_from_config(cfg['model']).to(self.device).requires_grad_(False)
         self.optimizer = optimizer_from_config(cfg['optimizer'], self.model.parameters())
         self.scheduler = scheduler_from_config(cfg['scheduler'], self.optimizer) if 'scheduler' in cfg else None
-        self.loss_fn = torch.nn.MSELoss()
+
+        self.loss_fn = KaggleLoss()
+        self.kaggle_loss = KaggleLoss()
 
         if wandb.run:
             self.setup_wandb()
@@ -91,8 +93,8 @@ class DefaultLoop:
             val_loss = self.validate(self.model, self.val_dl)
             ema_val_loss = self.validate(self.ema_model, self.val_dl)
 
-            test_loss = self.validate(self.model, self.val_dl_raw)
-            ema_test_loss = self.validate(self.ema_model, self.val_dl_raw)
+            test_loss = self.validate(self.model, self.val_dl_raw, kaggle_loss=True)
+            ema_test_loss = self.validate(self.ema_model, self.val_dl_raw, kaggle_loss=True)
 
             metrics = {
                 'train/loss': train_loss, 
@@ -165,7 +167,7 @@ class DefaultLoop:
         X, Y = X.to(self.device), Y.to(self.device)
 
         pred = self.model(X)
-        loss = self.loss_fn(pred*255, Y*255)  # to be consistent with the kaggle loss.
+        loss = self.loss_fn(pred, Y)
         
         self.optimizer.zero_grad()
         loss.backward()
@@ -176,7 +178,7 @@ class DefaultLoop:
         return loss
 
 
-    def validate(self, model, dl):
+    def validate(self, model, dl, kaggle_loss=False):
         N_batches = len(self.val_dl)
         
         self.model.eval()
@@ -185,8 +187,11 @@ class DefaultLoop:
             for X, Y in dl:
                 X, Y = X.to(self.device), Y.to(self.device)
                 pred = model(X)
-                val_loss += self.loss_fn(pred*255, Y*255).item()
-        
+                if kaggle_loss:
+                    val_loss += self.kaggle_loss(pred, Y).item()
+                else:
+                    val_loss += self.loss_fn(pred, Y).item()
+
         return val_loss / N_batches
 
 

@@ -55,9 +55,10 @@ class DefaultLoop:
         model_statistics = summary(self.model, input_data=X, col_names=('kernel_size', 'output_size', 'num_params'))
         print('-' * 50)
 
-        wandb.run.summary['params'] = model_statistics.trainable_params
-        wandb.run.summary['params_size'] = model_statistics.total_params*4 / 1e6
-        wandb.run.summary['pass_size'] = model_statistics.total_output*4 / 1e6
+        if wandb.run:
+            wandb.run.summary['params'] = model_statistics.trainable_params
+            wandb.run.summary['params_size'] = model_statistics.total_params*4 / 1e6
+            wandb.run.summary['pass_size'] = model_statistics.total_output*4 / 1e6
 
 
     def setup_wandb(self):

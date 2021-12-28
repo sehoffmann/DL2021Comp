@@ -4,6 +4,7 @@ from torch import nn
 from dlcomp.config import activation_from_config
 from .layers import ConvBnAct, LinearBnAct, UpsamplingConv, SelfAttention2D, ResidualBlock
 
+
 class SimpleAutoencoder(nn.Module):
 
     def __init__(self, **kwargs):
@@ -46,6 +47,109 @@ class SimpleAutoencoder(nn.Module):
         return out
 
 
+def conv_bn_act(in_c, out_c, kernel, stride, activation, residual=True, bn=True):
+    if residual:
+        conv = ResidualBlock(
+            in_c, 
+            out_c, 
+            kernel, 
+            stride=stride,
+            padding=(kernel-1) // 2,
+            activation=activation,
+            bn=bn,
+            track_running_stats=False
+        )
+    else:
+        conv =  ConvBnAct(
+            in_c, 
+            out_c, 
+            kernel, 
+            stride=stride,
+            padding=(kernel-1) // 2,
+            activation=activation,
+            bn=bn,
+            track_running_stats=False
+        )
+
+    return conv
+
+
+class EncoderBlock(nn.Module):
+
+    def __init__(self, in_c, features, n_layers, kernel, activation, residual=True, bn=True):
+        super(EncoderBlock, self).__init__()
+
+        self.layers = nn.ModuleList()
+        for i in range(n_layers):
+            if i == 0:
+                in_channels = in_c
+                stride = 2
+            else:
+                in_channels = features
+                stride = 1
+            
+            layer = conv_bn_act(
+                in_channels, 
+                features, 
+                kernel, 
+                stride=stride,
+                activation=activation,
+                residual=residual,
+                bn=bn
+            )
+            self.layers.append(layer)
+
+
+    def forward(self, x):
+        out = x
+        activations = []
+        for layer in self.layers:
+            out = layer(out)
+            activations.append(out)
+
+        return out, activations
+
+
+class DecoderBlock(nn.Module):
+
+    def __init__(self, features, out_c, n_layers, kernel, activation, residual=True, bn=True):
+        super(DecoderBlock, self).__init__()
+
+        self.layers = nn.ModuleList()
+        for i in range(n_layers):
+            if i < n_layers-1:
+                layer = conv_bn_act(
+                    features,
+                    features,
+                    kernel,
+                    stride=1,
+                    activation=activation,
+                    residual=residual,
+                    bn=bn
+                )
+            else:
+                layer = UpsamplingConv(
+                    features, 
+                    out_c,
+                    kernel, 
+                    activation=activation,
+                    residual=residual,
+                    bn=bn, 
+                    track_running_stats=False
+                )
+            
+            self.layers.append(layer)
+
+
+    def forward(self, x, skip_cons):
+        out = x
+        for i, layer in enumerate(self.layers):
+            if skip_cons:
+                out = out + skip_cons[i]
+            out = layer(out)
+
+        return out
+            
 
 class Autoencoder(nn.Module):
 
@@ -77,18 +181,20 @@ class Autoencoder(nn.Module):
 
 
         # Encoder
-        last_channels = in_c
+        in_channels = in_c
         self.encoders = nn.ModuleList()
-        for i, n_channels in enumerate(blocks):
-            for j in range(layers_per_block):
-                if j == 0:
-                    layer = self.encoder_layer(last_channels, n_channels, stride=2)
-                else:
-                    layer = self.encoder_layer(n_channels, n_channels, stride=1)
-                self.encoders.append(layer)
-            
-            last_channels = n_channels
-            size = size // 2
+        for n_features in blocks:
+            block = EncoderBlock(
+                in_channels,
+                n_features,
+                layers_per_block,
+                self.kernel,
+                self.activation,
+                residual=self.residual,
+                bn=self.bn
+            )
+            self.encoders.append(block)
+            in_channels = n_features
 
         # Bottleneck
         self.bottleneck = nn.Sequential(
@@ -98,16 +204,18 @@ class Autoencoder(nn.Module):
 
         # Decoder
         self.decoders = nn.ModuleList()
-        last_channels = blocks[-1]
-        decoder_channels = list(reversed(blocks[:-1])) + [out_c] 
-        for n_channels in decoder_channels:
-            for j in range(layers_per_block):
-                if j == layers_per_block - 1:
-                    layer = self.upsample_conv(last_channels, n_channels)
-                else:
-                    layer = self.conv_bn_act(last_channels, last_channels)
-                self.decoders.append(layer)
-            last_channels = n_channels
+        out_channels = reversed([out_c] + blocks[:-1]) 
+        for n_features, out_features in zip(reversed(blocks), out_channels):
+            block = DecoderBlock(
+                n_features, 
+                out_features,
+                layers_per_block,
+                self.kernel,
+                self.activation,
+                residual=self.residual,
+                bn=self.bn
+            )
+            self.decoders.append(block)
 
         self.out_act = nn.Sigmoid()
 
@@ -116,10 +224,10 @@ class Autoencoder(nn.Module):
         out = x
 
         # Encoder
-        enc_outputs = []
+        skip_connections = []
         for enc_layer in self.encoders:
-            out = enc_layer(out)
-            enc_outputs.append(out)
+            out, skips = enc_layer(out)
+            skip_connections.append(skips)
         
         # Bottleneck
         out = out.reshape(-1, self.hidden_features)
@@ -127,10 +235,12 @@ class Autoencoder(nn.Module):
         out = out.reshape(-1, self.hidden_dim, self.hidden_res, self.hidden_res)
 
         # Decoder
-        for i, dec_layer in enumerate(self.decoders):
+        for dec_layer, skips in zip(self.decoders, reversed(skip_connections)):
             if self.skip_connections:
-                out = out + enc_outputs[-i-1]
-            out = dec_layer(out)
+                skips = list(reversed(skips))
+                out = dec_layer(out, skips)
+            else:
+                out = dec_layer(out, None)
         
         out = self.out_act(out)
 
@@ -139,10 +249,6 @@ class Autoencoder(nn.Module):
             out = out.repeat(1,3,1,1)
 
         return out
-
-
-    def encoder_layer(self, in_c, out_c, stride):
-        return self.conv_bn_act(in_c, out_c, stride=stride)
 
 
     def upsample_conv(self, in_c, out_c, kernel=None):

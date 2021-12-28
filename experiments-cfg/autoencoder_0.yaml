@@ -4,13 +4,13 @@ experiment:
 
 model: 
   name: Autoencoder
-  layers:
+  blocks:
     - 32
     - 64
     - 64
+  layers_per_block: 1
   bottleneck_dim: 128
   skip_connections: True
-  attention: False
   residual: False
   activation: ReLU
   bn: True

@@ -60,28 +60,32 @@ class Autoencoder(nn.Module):
         self.grayscale = kwargs.pop('grayscale')
         self.residual = kwargs.pop('residual')
 
-        layers = kwargs.pop('layers')
+        blocks = kwargs.pop('blocks')
+        layers_per_block = kwargs.pop('layers_per_block')
+
         bottleneck_dim = kwargs.pop('bottleneck_dim')
-        attention = kwargs.pop('attention')
 
         in_c = 3
         out_c = 1 if self.grayscale else 3
 
         # Input Shape: 3 x 96 x 96
         size = 96
-        n_layers = len(layers)
-        self.hidden_res = size // (2**n_layers)
-        self.hidden_dim = layers[-1]
+        n_blocks = len(blocks)
+        self.hidden_res = size // (2**n_blocks)
+        self.hidden_dim = blocks[-1]
         self.hidden_features = self.hidden_dim * self.hidden_res * self.hidden_res
 
 
         # Encoder
         last_channels = in_c
         self.encoders = nn.ModuleList()
-        for i, n_channels in enumerate(layers):
-            use_attention = (i+1 == n_layers) and attention
-            layer = self.encoder_layer(last_channels, n_channels, size,size, attention=use_attention)
-            self.encoders.append(layer)
+        for i, n_channels in enumerate(blocks):
+            for j in range(layers_per_block):
+                if j == 0:
+                    layer = self.encoder_layer(last_channels, n_channels, stride=2)
+                else:
+                    layer = self.encoder_layer(n_channels, n_channels, stride=1)
+                self.encoders.append(layer)
             
             last_channels = n_channels
             size = size // 2
@@ -94,11 +98,15 @@ class Autoencoder(nn.Module):
 
         # Decoder
         self.decoders = nn.ModuleList()
-        last_channels = layers[-1]
-        decoder_channels = list(reversed(layers[:-1])) + [out_c] 
+        last_channels = blocks[-1]
+        decoder_channels = list(reversed(blocks[:-1])) + [out_c] 
         for n_channels in decoder_channels:
-            layer = self.upsample_conv(last_channels, n_channels)
-            self.decoders.append(layer)
+            for j in range(layers_per_block):
+                if j == layers_per_block - 1:
+                    layer = self.upsample_conv(last_channels, n_channels)
+                else:
+                    layer = self.conv_bn_act(last_channels, last_channels)
+                self.decoders.append(layer)
             last_channels = n_channels
 
         self.out_act = nn.Sigmoid()
@@ -132,14 +140,9 @@ class Autoencoder(nn.Module):
 
         return out
 
-    def encoder_layer(self, in_c, out_c, H, W, attention=False):
-        if attention:
-            return nn.Sequential(
-                self.conv_bn_act(in_c, out_c, stride=2),
-                SelfAttention2D(out_c, H//2, W//2, 2)
-            )
-        else:
-            return self.conv_bn_act(in_c, out_c, stride=2)
+
+    def encoder_layer(self, in_c, out_c, stride):
+        return self.conv_bn_act(in_c, out_c, stride=stride)
 
 
     def upsample_conv(self, in_c, out_c, kernel=None):

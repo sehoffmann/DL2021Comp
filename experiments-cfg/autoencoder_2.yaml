@@ -9,11 +9,11 @@ model:
     - 64
     - 128
     - 256
-  layers_per_block: 1
-  bottleneck_dim: 512
+  layers_per_block: 2
+  bottleneck_dim: 256
   skip_connections: True
   residual: True
-
+  
   activation: ReLU
   bn: True
   grayscale: False
@@ -24,7 +24,7 @@ augmentation: weak2
 optimizer:
   name: Adam
   lr: 0.002
-  weight_decay: 0.0001
+  weight_decay: 0.001
 
 scheduler:
   name: ReduceLROnPlateau

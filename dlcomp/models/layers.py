@@ -57,7 +57,7 @@ class ResidualBlock(nn.Module):
 
         self.conv1 = ConvBnAct(
             in_c, 
-            in_c,
+            out_c,
             kernel,
             stride=stride,
             padding=padding,
@@ -67,7 +67,7 @@ class ResidualBlock(nn.Module):
         )
 
         self.conv2 = nn.Conv2d(
-            in_c, 
+            out_c, 
             out_c,
             kernel,
             stride=1,

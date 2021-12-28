@@ -74,7 +74,7 @@ class DefaultLoop:
         wandb.define_metric('test-images', step_metric='epoch', hidden=True)
 
         # set step to 1 instead of 0
-        wandb.log(step=1)
+        wandb.log(data={}, step=1)
 
 
     def train(self):
@@ -102,7 +102,7 @@ class DefaultLoop:
                 'test/ema_loss': ema_test_loss
             }
 
-            new_best_model = self.early_stopping.update(self.epoch, self.model, ema_val_loss) 
+            new_best_model = self.early_stopping.update(self.epoch, self.ema_model, ema_val_loss) 
             if new_best_model:
                 print('new best model!')
                 for k,v in metrics.items():
@@ -136,7 +136,7 @@ class DefaultLoop:
             sys.stdout.flush()
             sys.stderr.flush()
 
-        infer_and_safe(self.model_dir, self.test_dl, self.early_stopping.best_model, self.device)
+        infer_and_safe(self.model_dir, self.test_dl, self.early_stopping.best_model, self.device, save_images=False)
         print("Done!")
 
 

@@ -71,9 +71,32 @@ def get_train_loaders(noisy_path, label_path, transform, val_split, batch_size, 
     val_set_aug = AugmentedDataset(val_set_raw, transform)
     val_set_raw = AugmentedDataset(val_set_raw, None)
 
-    train_dl = DataLoader(train_set_aug, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers)
-    val_dl = DataLoader(val_set_aug, batch_size=batch_size, shuffle=False, num_workers=num_workers)
-    val_dl_raw = DataLoader(val_set_raw, batch_size=batch_size, shuffle=False, num_workers=num_workers)
+    train_dl = DataLoader(
+        train_set_aug, 
+        batch_size=batch_size, 
+        shuffle=shuffle, 
+        num_workers=num_workers,
+        persistent_workers=True,
+        pin_memory=True
+    )
+
+    val_dl = DataLoader(
+        val_set_aug, 
+        batch_size=batch_size, 
+        shuffle=False, 
+        num_workers=num_workers,
+        persistent_workers=True,
+        pin_memory=True
+    )
+
+    val_dl_raw = DataLoader(
+        val_set_raw, 
+        batch_size=batch_size,
+        shuffle=False,
+        num_workers=num_workers,
+        persistent_workers=True,
+        pin_memory=True
+    )
 
     return train_dl, val_dl, val_dl_raw
 
@@ -81,7 +104,16 @@ def get_train_loaders(noisy_path, label_path, transform, val_split, batch_size, 
 def get_test_loaders(path, transform, batch_size, shuffle, num_workers):
     ds = load_test_dataset(path)
     ds_aug = AugmentedDataset(ds, transform)
-    return DataLoader(ds_aug, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers)
+    dl = DataLoader(
+        ds_aug, 
+        batch_size=batch_size, 
+        shuffle=shuffle, 
+        num_workers=num_workers,
+        persistent_workers=True,
+        pin_memory=True
+    )
+
+    return dl
 
 
 def loaders_from_config(cfg, transform):

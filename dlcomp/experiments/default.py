@@ -125,7 +125,7 @@ class DefaultLoop:
                 'perf/val_time': (ovh_t2 - ovh_t1) - (t2-t1)
             }
 
-            new_best_model = self.early_stopping.update(self.epoch, self.ema_model, ema_val_loss) 
+            new_best_model = self.early_stopping.update(self.epoch, self.ema_model, ema_test_loss) 
             if new_best_model:
                 print('new best model!')
                 for k,v in metrics.items():

@@ -19,10 +19,10 @@ epochs: 1000
 
 early_stopping:
   # how many epochs to wait for a better loss
-  grace: 100
+  grace: 50
 
   # minimum improvement required for an epoch to be considered better
-  min_delta: 15
+  min_delta: 10
 
 # how many percent of the training dataset to use for validation
 validation_split: 0.1

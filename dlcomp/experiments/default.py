@@ -72,6 +72,10 @@ class DefaultLoop:
         wandb.define_metric('test/loss', step_metric='epoch')
         wandb.define_metric('test/ema_loss', step_metric='epoch')
 
+        wandb.define_metric('perf/epoch_time', step_metric='epoch')
+        wandb.define_metric('perf/step_time', step_metric='epoch')
+        wandb.define_metric('perf/throughput', step_metric='epoch')
+
         wandb.define_metric('lr', step_metric='epoch', hidden=True)
 
         wandb.define_metric('test-images', step_metric='epoch', hidden=True)
@@ -90,7 +94,13 @@ class DefaultLoop:
             print(f"Epoch {self.epoch}")
             print("-" * 50)
             
+            # train
+            t1 = time.perf_counter()
             train_loss = self.train_epoch()
+            n_steps = len(self.train_dl)
+            t2 = time.perf_counter()
+
+
             val_loss = self.validate(self.model, self.val_dl)
             ema_val_loss = self.validate(self.ema_model, self.val_dl)
 
@@ -102,7 +112,11 @@ class DefaultLoop:
                 'val/loss': val_loss, 
                 'val/ema_loss': ema_val_loss,
                 'test/loss': test_loss,
-                'test/ema_loss': ema_test_loss
+                'test/ema_loss': ema_test_loss,
+
+                'perf/epoch_time': t2-t1,
+                'perf/step_time': 1000 * (t2-t1) / n_steps,  # in ms
+                'perf/throughput': (n_steps * self.cfg['batch_size']) / (t2-t1)
             }
 
             new_best_model = self.early_stopping.update(self.epoch, self.ema_model, ema_val_loss) 

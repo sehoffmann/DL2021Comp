@@ -175,20 +175,20 @@ class DefaultLoop:
         N_batches = len(self.train_dl)
 
         self.model.train()
-        epoch_loss= 0.0
+        epoch_loss = torch.tensor(0.0, device=self.device)
         for _, (X, Y) in enumerate(self.train_dl):
             self.batch += 1
             epoch_loss += self.step(X,Y)
 
         mean_loss = epoch_loss/N_batches
-        return mean_loss
+        return mean_loss.item()
 
 
     def step(self, X, Y):
-        X, Y = X.to(self.device), Y.to(self.device)
+        X, Y = X.to(self.device), Y.to(self.device, non_blocking=True)
 
         pred = self.model(X)
-        loss = self.loss_fn(pred, Y)
+        loss = self.loss_fn(pred, Y)  # torch.tensor !
         
         self.optimizer.zero_grad()
         loss.backward()
@@ -206,14 +206,14 @@ class DefaultLoop:
         val_loss = 0
         with torch.no_grad():
             for X, Y in dl:
-                X, Y = X.to(self.device), Y.to(self.device)
+                X, Y = X.to(self.device), Y.to(self.device, non_blocking=True)
                 pred = model(X)
                 if kaggle_loss:
-                    val_loss += self.kaggle_loss(pred, Y).item()
+                    val_loss += self.kaggle_loss(pred, Y)
                 else:
-                    val_loss += self.loss_fn(pred, Y).item()
+                    val_loss += self.loss_fn(pred, Y)
 
-        return val_loss / N_batches
+        return (val_loss / N_batches).item()
 
 
     def save_models(self, is_best=False):

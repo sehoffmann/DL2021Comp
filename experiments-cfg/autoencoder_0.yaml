@@ -13,7 +13,7 @@ model:
   skip_connections: True
   use_skip_convs: False
   residual: False
-  
+
   activation: ReLU
   bn: True
   grayscale: False
@@ -37,3 +37,5 @@ scheduler:
   
 
 batch_size: 256
+
+loss: Kaggle

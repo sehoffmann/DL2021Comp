@@ -38,3 +38,5 @@ scheduler:
   
 
 batch_size: 256
+
+loss: Kaggle

@@ -3,6 +3,7 @@ from torch import nn
 import inspect
 
 import dlcomp.augmentations as aug
+from dlcomp.losses import KaggleLoss
 
 
 def remove_name(cfg):
@@ -85,3 +86,19 @@ def activation_from_config(cfg):
         return nn.GELU(**kwargs)
     else:
         raise ValueError(f'unknown activation function {name}')
+
+
+def loss_from_config(cfg):
+    if not isinstance(cfg, str):
+        name = cfg['name']
+        kwargs = remove_name(cfg)
+    else:
+        name = cfg
+        kwargs = {}
+
+    if name == 'MSE':
+        return nn.MSELoss(**kwargs)
+    elif name == 'Kaggle':
+        return KaggleLoss(**kwargs)
+    else:
+        raise ValueError(f'unknown loss function {name}')

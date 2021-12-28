@@ -10,7 +10,7 @@ from torchinfo import summary
 import dlcomp.augmentations as aug
 from dlcomp.data_handling import loaders_from_config
 
-from dlcomp.config import augmentation_from_config, model_from_config, optimizer_from_config, scheduler_from_config
+from dlcomp.config import augmentation_from_config, loss_from_config, model_from_config, optimizer_from_config, scheduler_from_config
 from dlcomp.eval import infer_and_safe
 from dlcomp.util import EarlyStopping, update_ema_model
 from dlcomp.losses import KaggleLoss
@@ -37,7 +37,7 @@ class DefaultLoop:
         self.optimizer = optimizer_from_config(cfg['optimizer'], self.model.parameters())
         self.scheduler = scheduler_from_config(cfg['scheduler'], self.optimizer) if 'scheduler' in cfg else None
 
-        self.loss_fn = KaggleLoss()
+        self.loss_fn = loss_from_config(cfg['loss'])
         self.kaggle_loss = KaggleLoss()
 
         if wandb.run:

@@ -11,6 +11,7 @@ model:
   bottleneck_dim: 128
   skip_connections: True
   attention: False
+  residual: False
   activation: ReLU
   bn: True
   grayscale: False

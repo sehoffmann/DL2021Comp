@@ -12,7 +12,7 @@ class LinearBnAct(nn.Module):
 
         self.linear = nn.Linear(in_c, out_c, bias=bias and not bn)
         self.bn = nn.BatchNorm1d(out_c, affine=bias, track_running_stats=track_running_stats)
-        self.act = activation_from_config(activation)
+        self.act = activation
 
 
     def forward(self, x):
@@ -37,7 +37,7 @@ class ConvBnAct(nn.Module):
             bias = not bn
         )
         self.bn = nn.BatchNorm2d(out_c, track_running_stats=track_running_stats) if bn else None
-        self.act = activation_from_config(activation)
+        self.act = activation
 
 
     def forward(self, x):
@@ -48,19 +48,72 @@ class ConvBnAct(nn.Module):
         return out
 
 
+class ResidualBlock(nn.Module):
+
+    def __init__(self, in_c, out_c, kernel, stride, padding, activation, bn=True, track_running_stats=True):
+        super(ResidualBlock, self).__init__()
+
+        self.stride = stride
+
+        self.conv1 = ConvBnAct(
+            in_c, 
+            in_c,
+            kernel,
+            stride=stride,
+            padding=padding,
+            activation=activation,
+            bn=bn,
+            track_running_stats=track_running_stats
+        )
+
+        self.conv2 = nn.Conv2d(
+            in_c, 
+            out_c,
+            kernel,
+            stride=1,
+            padding=(kernel-1) // 2,
+            bias = not bn
+        )
+
+        self.projection = nn.Conv2d(in_c, out_c, 1, bias=False) if in_c != out_c else None
+        self.bn = nn.BatchNorm2d(out_c, track_running_stats=track_running_stats) if bn else None
+        self.act = activation
+
+
+    def forward(self, x):
+        out = self.conv1(x)
+        out = self.conv2(out)
+        
+        if self.projection:
+            out = self.projection(x[:,:,::self.stride, ::self.stride]) + out
+        else:
+            out = x[:,:,::self.stride, ::self.stride] + out
+
+        if self.bn:
+            out = self.bn(out)
+        
+        out = self.act(out)
+        return out
+
+
 class SelfAttention2D(nn.Module):
 
-    def __init__(self, in_c, H, W, num_heads):
+    def __init__(self, in_c, H, W, num_heads, layer_norm=True):
         super(SelfAttention2D, self).__init__()
 
         self.shape = (in_c, H, W)
         self.attention = nn.MultiheadAttention(in_c, num_heads=num_heads, batch_first=True)
+        self.norm = nn.LayerNorm(in_c) if layer_norm else None
 
     def forward(self, x):
         
         out = torch.flatten(x, start_dim=2)
         out = out.permute(0, 2, 1)
+        
         out, _ = self.attention(out, out, out, need_weights=False)
+        if self.norm:
+            out = self.norm(out)
+
         out = out.permute(0, 2, 1)
 
         C, H, W = self.shape
@@ -70,18 +123,32 @@ class SelfAttention2D(nn.Module):
 
 class UpsamplingConv(nn.Module):
 
-    def __init__(self, in_c, out_c, kernel, activation, bn=True, track_running_stats=True):
+    def __init__(self, in_c, out_c, kernel, activation, residual=False, bn=True, track_running_stats=True):
         super(UpsamplingConv, self).__init__()
-        self.in_conv = ConvBnAct(
-            in_c,
-            in_c,
-            kernel,
-            stride=1,
-            padding=(kernel-1) // 2,
-            activation=activation,
-            bn=bn,
-            track_running_stats=track_running_stats
-        )
+
+        if residual:
+            self.in_conv = ConvBnAct(
+                in_c,
+                in_c,
+                kernel,
+                stride=1,
+                padding=(kernel-1) // 2,
+                activation=activation,
+                bn=bn,
+                track_running_stats=track_running_stats
+            )
+        else:
+            self.in_conv = ResidualBlock(
+                in_c,
+                in_c,
+                kernel,
+                stride=1,
+                padding=(kernel-1) // 2,
+                activation=activation,
+                bn=bn,
+                track_running_stats=track_running_stats
+            )
+
         self.upsample = nn.Upsample(scale_factor=2, mode='bilinear', align_corners=False)
         self.projection = nn.Conv2d(
             in_c, 

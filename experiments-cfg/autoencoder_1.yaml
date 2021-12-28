@@ -7,10 +7,12 @@ model:
   layers:
     - 32
     - 64
-    - 64
-  bottleneck_dim: 128
+    - 128
+    - 256
+  bottleneck_dim: 512
   skip_connections: True
   attention: False
+  residual: True
   activation: ReLU
   bn: True
   grayscale: False

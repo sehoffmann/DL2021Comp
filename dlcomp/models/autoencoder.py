@@ -1,6 +1,8 @@
 import torch
 from torch import nn
-from .layers import ConvBnAct, LinearBnAct, UpsamplingConv, SelfAttention2D
+
+from dlcomp.config import activation_from_config
+from .layers import ConvBnAct, LinearBnAct, UpsamplingConv, SelfAttention2D, ResidualBlock
 
 class SimpleAutoencoder(nn.Module):
 
@@ -51,11 +53,13 @@ class Autoencoder(nn.Module):
         super(Autoencoder, self).__init__()
 
         self.kernel = kwargs.pop('kernel', 3)
-        self.activation = kwargs.pop('activation')
-        
+        self.activation = activation_from_config(kwargs.pop('activation'))
+
         self.skip_connections = kwargs.pop('skip_connections')
         self.bn = kwargs.pop('bn')
         self.grayscale = kwargs.pop('grayscale')
+        self.residual = kwargs.pop('residual')
+
         layers = kwargs.pop('layers')
         bottleneck_dim = kwargs.pop('bottleneck_dim')
         attention = kwargs.pop('attention')
@@ -144,7 +148,8 @@ class Autoencoder(nn.Module):
             in_c, 
             out_c, 
             kernel, 
-            self.activation, 
+            activation = self.activation,
+            residual=self.residual,
             bn=self.bn, 
             track_running_stats=False
         )
@@ -153,16 +158,31 @@ class Autoencoder(nn.Module):
     def conv_bn_act(self, in_c, out_c, kernel=None, activation=None, stride=1):
         kernel = kernel if kernel else self.kernel
         activation = activation if activation else self.activation
-        return ConvBnAct(
-            in_c, 
-            out_c, 
-            kernel, 
-            stride=stride,
-            padding=(kernel-1) // 2,
-            activation=self.activation,
-            bn=self.bn,
-            track_running_stats=False
-        )
+        
+        if self.residual:
+            conv = ResidualBlock(
+                in_c, 
+                out_c, 
+                kernel, 
+                stride=stride,
+                padding=(kernel-1) // 2,
+                activation=self.activation,
+                bn=self.bn,
+                track_running_stats=False
+            )
+        else:
+            conv =  ConvBnAct(
+                in_c, 
+                out_c, 
+                kernel, 
+                stride=stride,
+                padding=(kernel-1) // 2,
+                activation=self.activation,
+                bn=self.bn,
+                track_running_stats=False
+            )
+
+        return conv
 
     
     def linear_bn_act(self, in_c, out_c):

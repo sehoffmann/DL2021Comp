@@ -5,6 +5,7 @@ import time
 import os
 import shutil
 import numpy as np
+from torchinfo import summary
 
 import dlcomp.augmentations as aug
 from dlcomp.data_handling import loaders_from_config
@@ -40,7 +41,21 @@ class DefaultLoop:
         if wandb.run:
             self.setup_wandb()
 
+        self.summary()
+
+
+    def summary(self):
+        print('-' * 50)
         print(self.model)
+        print('-' * 50)
+        self.model.eval()
+        X,_ = next(iter(self.train_dl))
+        model_statistics = summary(self.model, input_data=X, col_names=('kernel_size', 'output_size', 'num_params'))
+        print('-' * 50)
+
+        wandb.run.summary['params'] = model_statistics.trainable_params
+        wandb.run.summary['params_size'] = model_statistics.total_params*4 / 1e6
+        wandb.run.summary['pass_size'] = model_statistics.total_output*4 / 1e6
 
 
     def setup_wandb(self):
@@ -57,6 +72,9 @@ class DefaultLoop:
         wandb.define_metric('lr', step_metric='epoch', hidden=True)
 
         wandb.define_metric('test-images', step_metric='epoch', hidden=True)
+
+        # set step to 1 instead of 0
+        wandb.log(step=1)
 
 
     def train(self):

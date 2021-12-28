@@ -12,7 +12,7 @@ class LinearBnAct(nn.Module):
 
         self.linear = nn.Linear(in_c, out_c, bias=bias and not bn)
         self.bn = nn.BatchNorm1d(out_c, affine=bias, track_running_stats=track_running_stats)
-        self.act = activation
+        self.act = copy.deepcopy(activation)
 
 
     def forward(self, x):
@@ -37,7 +37,7 @@ class ConvBnAct(nn.Module):
             bias = not bn
         )
         self.bn = nn.BatchNorm2d(out_c, track_running_stats=track_running_stats) if bn else None
-        self.act = activation
+        self.act = copy.deepcopy(activation)
 
 
     def forward(self, x):
@@ -77,7 +77,7 @@ class ResidualBlock(nn.Module):
 
         self.projection = nn.Conv2d(in_c, out_c, 1, bias=False) if in_c != out_c else None
         self.bn = nn.BatchNorm2d(out_c, track_running_stats=track_running_stats) if bn else None
-        self.act = activation
+        self.act = copy.deepcopy(activation)
 
 
     def forward(self, x):

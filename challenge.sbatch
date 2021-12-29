@@ -10,7 +10,7 @@
 
 #resources:
 
-#SBATCH --cpus-per-task=4
+#SBATCH --cpus-per-task=10
 # the job can use and see 4 CPUs (from max 24).
 
 #SBATCH --partition=day
@@ -22,7 +22,7 @@
 #SBATCH --gres=gpu:1
 #the job can use and see 1 GPUs (4 GPUs are available in total on one node)
 
-#SBATCH --time=23:0:0
+#SBATCH --time=12:00:000
 # the maximum time the scripts needs to run
 # "minutes:seconds", "hours:minutes:seconds", "days-hours", "days-hours:minutes" and "days-hours:minutes:seconds"
 
@@ -32,10 +32,10 @@
 #SBATCH --output=job.%J.out
 # write the standard output to job.*jobID*.out
 
-#SBATCH --mail-type=ALL
+#SBATCH --mail-type=NONE
 #write a mail if a job begins, ends, fails, gets requeued or stages out
 
-#SBATCH --mail-user=***@uni-tuebingen.de
+#SBATCH --mail-user=sh@uni-tuebingen.de
 # your mail address
 
 ####
@@ -43,7 +43,7 @@
 #/common/datasets/DLChallenge2021/*
 ####
 
-cp -R /common/datasets/DLChallenge2021/* /scratch/$SLURM_JOB_ID/
+cp -r ~/DL2021Comp /scratch/$SLURM_JOB_ID/
 
 ####
 #c) Execute your pytorch code in a specific singularity container
@@ -51,7 +51,8 @@ cp -R /common/datasets/DLChallenge2021/* /scratch/$SLURM_JOB_ID/
 # TODO adapt the path to your predicted_test_label_save_dir
 ####
 
-singularity exec --nv /common/singularityImages/default.simg python ~/experiments/DL_challenge_2021/train.py --train_data_path="/scratch/$SLURM_JOB_ID/train_noisy.npy" --train_labels_path="/scratch/$SLURM_JOB_ID/train_clean.npy" --test_data_path="/scratch/$SLURM_JOB_ID/test_noisy_100.npy" --predicted_test_label_save_dir="/home/mutschler/experiments/DL_challenge_2021/predictions"
+cd /scratch/$SLURM_JOB_ID/DL2021Comp
+singularity exec --nv /common/singularityImages/default.simg ./tcml-agent.sh $1
 
 echo DONE!
 

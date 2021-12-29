@@ -1,0 +1,27 @@
+program: dlcomp/train.py
+command:
+  - ${env}
+  - ${interpreter}
+  - ${program}
+  - "--config"
+  - "experiments-cfg/autoencoder_3.yaml"
+
+method: grid
+
+metric:
+  name: test/ema_loss
+  goal: minimize
+
+parameters:
+  augmentation.strength: 
+    values:
+      - 0.6
+      - 0.8
+      - 1.0
+      - 1.2
+  augmentation.proportion: 
+    values:
+      - 0.8
+      - 0.9
+      - 0.95
+      - 1.0

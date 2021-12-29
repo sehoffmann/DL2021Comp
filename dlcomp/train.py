@@ -40,6 +40,7 @@ def main(argv):
         group = 'autoencoder'
     )
 
+    config = dict(wandb.config)  # important for sweeps!
     if config['device'] == 'auto':
         config['device'] = 'cuda' if torch.cuda.is_available() else 'cpu'
     print(f"Using {config['device']} device")

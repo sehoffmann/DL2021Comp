@@ -20,7 +20,10 @@ model:
   grayscale: False
 
 
-augmentation: weak2
+augmentation: 
+  name: weak2
+  strength: 1.0
+  proportion: 1.0
 
 optimizer:
   name: Adam

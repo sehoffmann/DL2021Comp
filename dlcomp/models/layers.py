@@ -7,19 +7,27 @@ from dlcomp.config import activation_from_config
 
 class LinearBnAct(nn.Module):
 
-    def __init__(self, in_c, out_c, activation, bias=True, bn=True, track_running_stats=True):
+    def __init__(self, in_c, out_c, activation, bias=True, dropout=0, bn=True, track_running_stats=True):
         super(LinearBnAct, self).__init__()
 
         self.linear = nn.Linear(in_c, out_c, bias=bias and not bn)
         self.bn = nn.BatchNorm1d(out_c, affine=bias, track_running_stats=track_running_stats)
         self.act = copy.deepcopy(activation)
+        if dropout:
+            self.dropout = nn.Dropout(0)
 
 
     def forward(self, x):
         out = self.linear(x)
+        
         if self.bn:
             out = self.bn(out)
+        
         out = self.act(out)
+
+        if self.dropout:
+            out = self.dropout(out)
+        
         return out
 
 

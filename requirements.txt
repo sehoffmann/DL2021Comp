@@ -1,0 +1,8 @@
+numpy
+torch
+torchvision
+torchinfo
+kaggle
+wandb
+absl-py
+imgaug

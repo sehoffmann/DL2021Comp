@@ -33,6 +33,10 @@ class DefaultLoop:
         self.early_stopping = EarlyStopping.from_config(cfg['early_stopping'])
 
         self.model = model_from_config(cfg['model']).to(self.device)
+        if cfg['data_parallel']:
+            self.model = torch.nn.DataParallel(self.model)
+
+
         self.ema_model = model_from_config(cfg['model']).to(self.device).requires_grad_(False)
         self.optimizer = optimizer_from_config(cfg['optimizer'], self.model.parameters())
         self.scheduler = scheduler_from_config(cfg['scheduler'], self.optimizer) if 'scheduler' in cfg else None

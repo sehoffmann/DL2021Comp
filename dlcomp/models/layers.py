@@ -14,7 +14,7 @@ class LinearBnAct(nn.Module):
         self.bn = nn.BatchNorm1d(out_c, affine=bias, track_running_stats=track_running_stats)
         self.act = copy.deepcopy(activation)
         if dropout:
-            self.dropout = nn.Dropout(0)
+            self.dropout = nn.Dropout(dropout)
         else:
             self.dropout = None
 

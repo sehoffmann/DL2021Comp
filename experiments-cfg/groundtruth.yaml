@@ -11,3 +11,5 @@ optimizer:
   lr: 0.0005
 
 batch_size: 128
+
+loss: Kaggle

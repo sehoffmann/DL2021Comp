@@ -15,6 +15,8 @@ class LinearBnAct(nn.Module):
         self.act = copy.deepcopy(activation)
         if dropout:
             self.dropout = nn.Dropout(0)
+        else:
+            self.dropout = None
 
 
     def forward(self, x):

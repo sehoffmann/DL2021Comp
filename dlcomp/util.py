@@ -5,7 +5,7 @@ import copy
 import wandb
 
 
-def cleanup_wandb_config(config):
+def cleanup_wandb_config(config, update=True):
     """
     Currently sweeps don't properly populate nested dicts.
     This function removes dotted names from the config, e.g. 'augmentation.strength',
@@ -31,17 +31,19 @@ def cleanup_wandb_config(config):
                 dct = dct[part]
         
         dct[parts[-1]] = value
-    
-    # write changes back to wandb.config for consistency
-    wandb.config = wandb.Config()  # because there is no __del__()
-    for k,v in config.items():
-        wandb.config[k] = v
 
     # update config on backend
-    api = wandb.Api()
-    run = api.run(wandb.run.path)
-    run.config = config
-    run.update()
+    if update:
+        api = wandb.Api()
+        run = api.run(wandb.run.path)
+        run.config = config
+        run.update()
+
+    # write changes back to wandb.config for consistency
+    if wandb.run:
+        wandb.config = wandb.Config()  # because there is no __del__()
+        for k,v in config.items():
+            wandb.config[k] = v
 
     return config
 

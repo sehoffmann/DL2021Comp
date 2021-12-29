@@ -2,6 +2,48 @@ import torch
 import numpy as np
 import imgaug
 import copy
+import wandb
+
+
+def cleanup_wandb_config(config):
+    """
+    Currently sweeps don't properly populate nested dicts.
+    This function removes dotted names from the config, e.g. 'augmentation.strength',
+    and turns them into nested dicts: config['augmentation']['strength'] = ...
+    """
+    removed_keys = []
+    for key in config.copy():
+        if '.' not in key:
+            continue
+
+        value = config[key]
+        removed_keys.append(key)
+        del config[key]
+
+        parts = key.split('.')
+        dct = config
+        for part in parts[:-1]:
+            if part in dct:
+                assert isinstance(dct[part], dict)
+                dct = dct[part]
+            else:
+                dct[part] = {}
+                dct = dct[part]
+        
+        dct[parts[-1]] = value
+    
+    # write changes back to wandb.config for consistency
+    wandb.config = wandb.Config()  # because there is no __del__()
+    for k,v in config.items():
+        wandb.config[k] = v
+
+    # update config on backend
+    api = wandb.Api()
+    run = api.run(wandb.run.path)
+    run.config = config
+    run.update()
+
+    return config
 
 
 def set_seed(seed):

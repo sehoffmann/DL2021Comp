@@ -1,10 +1,11 @@
 import torch
 import wandb
 import logging
+import pprint
 from absl import flags, app
 
 from dlcomp.config import experiment_from_config
-from dlcomp.util import set_seed
+from dlcomp.util import cleanup_wandb_config, set_seed
 
 import yaml
 try:
@@ -40,10 +41,19 @@ def main(argv):
         group = 'autoencoder'
     )
 
-    config = dict(wandb.config)  # important for sweeps!
+    # retrieve config from wandb, cleanup dotted named, and write it back
+    # important for sweeps
+    config = dict(wandb.config)
+    config = cleanup_wandb_config(config)
+
+    print('='*80 + '\nConfig:\n' + '=' * 80)
+    pprint.pprint(config)
+
     if config['device'] == 'auto':
         config['device'] = 'cuda' if torch.cuda.is_available() else 'cpu'
-    print(f"Using {config['device']} device")
+    print('=' * 80)
+    print(f'Using "{config["device"]}" device')
+    print('=' * 80)
 
     # setup randomness
     set_seed(config['seed'])

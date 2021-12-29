@@ -59,8 +59,15 @@ def experiment_from_config(cfg):
         raise ValueError(f'unknown experiment {experiment}')
 
 
-def augmentation_from_config(name):
-    return aug.augmentations[name]()
+def augmentation_from_config(cfg):
+    if not isinstance(cfg, str):
+        name = cfg['name']
+        kwargs = remove_name(cfg)
+    else:
+        name = cfg
+        kwargs = {}
+
+    return aug.augmentations[name](**kwargs)
 
 
 def activation_from_config(cfg):

@@ -57,22 +57,30 @@ def _weak1():
     return iaa.Sometimes(0.9, aug)
 
 
-def _weak2():
+def _weak2(**cfg):
     """
     doesn't introduce artifacts or changes the "black box noise" by a lot
     thus stays more true to the original distribution
     """
-    return iaa.Sequential([
+    strength = cfg.pop('strength', 1.0)
+    proportion = cfg.pop('proportion', 1.0)
+
+    aug = iaa.Sequential([
         iaa.Fliplr(0.5),
         iaa.Flipud(0.5),
         iaa.Affine(
-            scale={"x": (0.9, 1.1), "y": (0.9, 1.1)}, 
-            translate_percent={"x": (-0.1, 0.1), "y": (-0.1, 0.1)}, 
+            scale={"x": (1 - 0.1*strength, 1 + 0.1*strength), "y": (1 - 0.1*strength, 1 + 0.1*strength)}, 
+            translate_percent={"x": (-0.1*strength, 0.1*strength), "y": (-0.1*strength, 0.1*strength)}, 
             mode='symmetric'
         ),
-        iaa.MultiplySaturation((0.2, 1.3)),
+        iaa.MultiplySaturation((0.75 - 0.55*strength, 0.75 + 0.55*strength)),
         iaa.AddToHue((-255, 255))
     ])
+
+    if proportion < 1.0:
+        aug = iaa.Sometimes(proportion, aug)
+
+    return aug
     
 
 augmentations = {

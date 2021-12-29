@@ -6,6 +6,7 @@ from kaggle.api.kaggle_api_extended import KaggleApi
 
 from dlcomp.config import experiment_from_config
 from dlcomp.eval import infer_and_safe
+from dlcomp.util import set_seed
 
 
 FLAGS = flags.FLAGS
@@ -17,12 +18,17 @@ flags.DEFINE_bool('infer', True, 'whether to rerun the inference')
 def main(vargs):
     api = wandb.Api()
     run = api.run(f'sehoffmann/dlcomp/runs/{FLAGS.run}')
-
     config = dict(run.config)
+
+    # setup device
     if config['device'] == 'auto':
         config['device'] = 'cuda' if torch.cuda.is_available() else 'cpu'
     print(f"Using {config['device']} device")
 
+    # setup randomness
+    set_seed(config['seed'])
+
+    # run inference or load cvv results
     experiment = experiment_from_config(config)
     if FLAGS.infer:
         best_model = run.file('models/best.pth').download(experiment.model_dir)  # io.TextIOWrapper
@@ -31,7 +37,7 @@ def main(vargs):
     else:
         csv_path = run.file('kaggle_prediction.csv').download(experiment.model_dir).name
 
-
+    # submit to kaggle
     kaggle_api = KaggleApi()
     kaggle_api.authenticate()
 

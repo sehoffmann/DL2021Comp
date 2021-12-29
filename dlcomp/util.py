@@ -1,5 +1,16 @@
 import torch
+import numpy as np
+import imgaug
 import copy
+
+
+def set_seed(seed):
+    """
+    makes sure that seed is set consistently for all libraries
+    """
+    np.random.seed(seed % 2**32)
+    torch.manual_seed(seed)
+    imgaug.seed(seed)
 
 
 def update_ema_model(model, ema_model, alpha):

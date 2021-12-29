@@ -1,17 +1,16 @@
 import torch
-import numpy as np
 import wandb
 import logging
-import copy
 from absl import flags, app
 
 from dlcomp.config import experiment_from_config
+from dlcomp.util import set_seed
 
 import yaml
 try:
-    from yaml import CLoader as Loader, CDumper as Dumper
+    from yaml import CLoader as Loader
 except ImportError:
-    from yaml import Loader, Dumper
+    from yaml import Loader
 
 
 FLAGS = flags.FLAGS
@@ -46,8 +45,7 @@ def main(argv):
     print(f"Using {config['device']} device")
 
     # setup randomness
-    np.random.seed(config['seed'])
-    torch.manual_seed(config['seed'])
+    set_seed(config['seed'])
     if config['deterministic_cudnn']:
         torch.backends.cudnn.deterministic = True
 

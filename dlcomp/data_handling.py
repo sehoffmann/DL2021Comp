@@ -1,12 +1,13 @@
-from imgaug.augmentables import heatmaps
 import torch
-from torch.utils.data import DataLoader , Dataset
+from torch.utils.data import DataLoader, Dataset
 
 import numpy as np
 from PIL import Image
 from imgaug.augmentables.heatmaps import HeatmapsOnImage
 
+from dlcomp.util import set_seed
 import dlcomp.augmentations as aug
+
 
 class NumpyDataset(Dataset):
     def __init__(self, data, targets):
@@ -47,6 +48,11 @@ class AugmentedDataset(Dataset):
         return len(self.source_ds)
 
 
+def seed_worker(worker_id):
+    torch_seed = torch.initial_seed()
+    set_seed(torch_seed)  # make sure that worker seed is propagated to 3rd party libs
+
+
 def load_test_dataset(path):
     data = np.load(path)
     return NumpyDataset(data, np.zeros_like(data))
@@ -79,6 +85,7 @@ def get_train_loaders(noisy_path, label_path, transform, val_split, batch_size, 
         persistent_workers=True,
         pin_memory=True,
         prefetch_factor=2,
+        worker_init_fn=seed_worker
     )
 
     val_dl = DataLoader(
@@ -89,6 +96,7 @@ def get_train_loaders(noisy_path, label_path, transform, val_split, batch_size, 
         persistent_workers=True,
         pin_memory=True,
         prefetch_factor=2,
+        worker_init_fn=seed_worker
     )
 
     val_dl_raw = DataLoader(
@@ -99,6 +107,7 @@ def get_train_loaders(noisy_path, label_path, transform, val_split, batch_size, 
         persistent_workers=True,
         pin_memory=True,
         prefetch_factor=2,
+        worker_init_fn=seed_worker
     )
 
     return train_dl, val_dl, val_dl_raw
@@ -115,6 +124,7 @@ def get_test_loaders(path, transform, batch_size, shuffle, num_workers):
         persistent_workers=True,
         pin_memory=True,
         prefetch_factor=2,
+        worker_init_fn=seed_worker
     )
 
     return dl

@@ -9,7 +9,7 @@ command:
 method: grid
 
 metric:
-  name: test/ema_loss
+  name: best/test/ema_loss
   goal: minimize
 
 parameters:

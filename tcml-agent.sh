@@ -9,7 +9,7 @@ export PATH=$PATH:~/.local/bin
 # wandb login $1 
 
 # sweep agent:
-wandb agent $1
+wandb agent --count 8 $1
 
 # regular training:
 # python dlcomp/train.py --config experiments-cfg/autoencoder_3.yaml

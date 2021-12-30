@@ -1,0 +1,37 @@
+program: dlcomp/train.py
+command:
+  - ${env}
+  - ${interpreter}
+  - ${program}
+  - "--config"
+  - "experiments-cfg/autoencoder_4.yaml"
+
+method: grid
+
+metric:
+  name: best/test/ema_loss
+  goal: minimize
+
+parameters:
+
+  optimizer.name:
+    values:
+      - Adam
+      - SGD
+
+  optimizer.lr:
+    values:
+      - 0.0001
+      - 0.0002
+      - 0.0005
+      - 0.0009
+      - 0.001
+      - 0.002
+      - 0.003
+      - 0.004
+      - 0.005
+      - 0.006
+      - 0.01
+      - 0.02
+      - 0.05
+      - 0.1

@@ -141,7 +141,7 @@ class DefaultLoop:
                 print(f'no improvement since {self.early_stopping.grace_period} epochs. stopping early')
 
 
-            if self.epoch % self.cfg['save_every'] == 0:
+            if self.epoch % 20 == 0:
                 self.log_test_images(self.model)
             
            

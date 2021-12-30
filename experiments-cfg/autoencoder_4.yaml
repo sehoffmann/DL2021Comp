@@ -1,0 +1,45 @@
+experiment: 
+  name: default
+  ema_alpha: 0.98
+
+model: 
+  name: Autoencoder
+  blocks:
+    - 64
+    - 128
+    - 256
+    - 256
+  layers_per_block: 2
+  bottleneck_dim: 256
+  skip_connections: True
+  use_skip_convs: False
+  residual: True
+  
+  activation: ReLU
+  bn: True
+  grayscale: False
+
+
+augmentation: 
+  name: weak2
+  strength: 0.6
+  proportion: 0.8
+
+optimizer:
+  name: Adam
+  lr: 0.002
+  weight_decay: 0.01
+
+scheduler:
+  name: ReduceLROnPlateau
+  factor: 0.2
+  min_lr: 0.00001
+  patience: 20
+  cooldown: 30
+  threshold: 0.005
+  verbose: True
+  
+
+batch_size: 256
+
+loss: Kaggle

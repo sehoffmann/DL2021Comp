@@ -12,6 +12,7 @@ def main(vargs):
     api = wandb.Api()
     sweep = api.sweep(f'sehoffmann/dlcomp/{FLAGS.sweep}')
     for run in sweep.runs:
+        print(f'pruning {run.id}')
         run.config = cleanup_wandb_config(run.config, update=False)
         run.update()
 

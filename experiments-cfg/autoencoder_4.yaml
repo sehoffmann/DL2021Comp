@@ -27,17 +27,12 @@ augmentation:
 
 optimizer:
   name: Adam
-  lr: 0.002
+  lr: 0.001
   weight_decay: 0.01
 
 scheduler:
-  name: ReduceLROnPlateau
-  factor: 0.2
-  min_lr: 0.00001
-  patience: 20
-  cooldown: 30
-  threshold: 0.005
-  verbose: True
+  name: ExponentialLR
+  gamma: 0.999
   
 
 batch_size: 256

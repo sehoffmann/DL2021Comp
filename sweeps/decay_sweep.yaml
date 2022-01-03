@@ -1,0 +1,22 @@
+program: dlcomp/train.py
+command:
+  - ${env}
+  - ${interpreter}
+  - ${program}
+  - "--config"
+  - "experiments-cfg/autoencoder_4.yaml"
+
+method: grid
+
+metric:
+  name: best/test/ema_loss
+  goal: minimize
+
+parameters:
+
+  scheduler.gamma:
+    values:
+      - 0.985
+      - 0.99
+      - 0.995
+      - 0.999

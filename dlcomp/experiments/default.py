@@ -26,8 +26,8 @@ class DefaultLoop:
             self.model_dir = cfg['out_path'] + f"/run_{time.strftime('%Y-%m-%d-%H-%M-%S', time.localtime())}"
             os.makedirs(self.model_dir)
 
-        augmentation = augmentation_from_config(cfg['augmentation'])
-        self.train_dl, self.val_dl, self.val_dl_raw, self.test_dl = loaders_from_config(cfg, augmentation)
+        self.augmentation = augmentation_from_config(cfg['augmentation'])
+        self.train_dl, self.val_dl, self.val_dl_raw, self.test_dl = self.setup_datasets(cfg)
         self.device = cfg['device']
         
         self.early_stopping = EarlyStopping.from_config(cfg['early_stopping'])
@@ -54,9 +54,12 @@ class DefaultLoop:
         print('-' * 50)
         print(self.model)
         print('-' * 50)
+
         self.model.eval()
-        X,_ = next(iter(self.train_dl))
+        X,Y = next(iter(self.train_dl))
+        X,Y = self.prepare_batch(X,Y)
         model_statistics = summary(self.model, input_data=X, col_names=('kernel_size', 'output_size', 'num_params'))
+        
         print('-' * 50)
 
         if wandb.run:
@@ -89,6 +92,10 @@ class DefaultLoop:
         wandb.log(data={}, step=1)
 
 
+    def setup_datasets(self, cfg):
+        return loaders_from_config(cfg, self.augmentation)
+
+
     def train(self):
         self.epoch = 0
         self.batch = 0
@@ -111,8 +118,8 @@ class DefaultLoop:
             val_loss = self.validate(self.model, self.val_dl)
             ema_val_loss = self.validate(self.ema_model, self.val_dl)
 
-            test_loss = self.validate(self.model, self.val_dl_raw, kaggle_loss=True)
-            ema_test_loss = self.validate(self.ema_model, self.val_dl_raw, kaggle_loss=True)
+            test_loss = self.validate(self.model, self.val_dl_raw, is_test=True)
+            ema_test_loss = self.validate(self.ema_model, self.val_dl_raw, is_test=True)
 
             ovh_t2 = time.perf_counter()
 
@@ -145,6 +152,7 @@ class DefaultLoop:
                 self.log_test_images(self.model)
             
            
+            metrics = self.update_metrics(metrics)
             print('\n'.join([f'{k}: {v:>7f}' for k,v in metrics.items()]))
             metrics.update({'lr': self.get_lr(), 'epoch': self.epoch, 'batch': self.batch})
             wandb.log(metrics)
@@ -189,7 +197,7 @@ class DefaultLoop:
 
 
     def step(self, X, Y):
-        X, Y = X.to(self.device), Y.to(self.device, non_blocking=True)
+        X, Y = self.prepare_batch(X,Y)
 
         pred = self.model(X)
         loss = self.loss_fn(pred, Y)  # torch.tensor !
@@ -203,21 +211,25 @@ class DefaultLoop:
         return loss
 
 
-    def validate(self, model, dl, kaggle_loss=False):
+    def validate(self, model, dl, is_test=False):
         N_batches = len(self.val_dl)
         
         self.model.eval()
         val_loss = 0
         with torch.no_grad():
             for X, Y in dl:
-                X, Y = X.to(self.device), Y.to(self.device, non_blocking=True)
-                pred = model(X)
-                if kaggle_loss:
-                    val_loss += self.kaggle_loss(pred, Y)
-                else:
-                    val_loss += self.loss_fn(pred, Y)
+                val_loss += self.validate_step(model, X,Y, is_test)
 
         return (val_loss / N_batches).item()
+
+
+    def validate_step(self, model, X,Y, is_test):
+        X, Y = self.prepare_batch(X,Y)
+        pred = model(X)
+        if is_test:
+            return self.kaggle_loss(pred, Y)
+        else:
+            return self.loss_fn(pred, Y)
 
 
     def save_models(self, is_best=False):
@@ -258,10 +270,30 @@ class DefaultLoop:
     def log_test_images(self, model):
         predictions = []
         for i, (X, Y) in enumerate(self.test_dl):
-            X = X.to(self.device)
-            preds = model(X).detach().cpu().numpy()
-            predictions += [preds]
+            outputs = self.inference(model, X)
+            predictions.append(outputs)
 
-        imgs = np.moveaxis(np.concatenate(predictions), 1, -1)
+        predictions = np.concatenate(predictions)
+        imgs = np.moveaxis(predictions, 1, -1)  # CHW -> HWC
         test_images = [wandb.Image(img) for img in imgs]
         wandb.log({'test-images': test_images, 'epoch': self.epoch}, commit=False)
+
+
+    def inference(self, model, X):
+        X, _ = self.prepare_batch(X, torch.Tensor(0.0))
+        return model(X).detach().cpu().numpy()
+
+    
+    def prepare_batch(self, X,Y):
+        """
+        Takes in the output produced by the dataset and produces
+        torch.Tensor's ready for inference
+        """
+        return X.to(self.device), Y.to(self.device, non_blocking=True)
+
+
+    def update_metrics(self, metrics):
+        """
+        hook point at end of epoch
+        """
+        return metrics

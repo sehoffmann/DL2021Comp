@@ -71,7 +71,8 @@ def _weak2(**cfg):
         iaa.Affine(
             scale={"x": (1 - 0.1*strength, 1 + 0.1*strength), "y": (1 - 0.1*strength, 1 + 0.1*strength)}, 
             translate_percent={"x": (-0.1*strength, 0.1*strength), "y": (-0.1*strength, 0.1*strength)}, 
-            mode='symmetric'
+            mode='symmetric',
+            order=3  # bicubic
         ),
         iaa.MultiplySaturation((1.0 - 0.8*strength, 1.0 + 0.3*strength)),
         iaa.AddToHue((-255, 255))

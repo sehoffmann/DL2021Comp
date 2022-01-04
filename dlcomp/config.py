@@ -55,6 +55,9 @@ def experiment_from_config(cfg):
     elif experiment == 'groundtruth':
         from dlcomp.experiments.groundtruth import Groundtruth
         return Groundtruth(cfg)
+    elif experiment == 'mean_teacher':
+        from dlcomp.experiments.mean_teacher import MeanTeacherLoop
+        return MeanTeacherLoop(cfg)
     else:
         raise ValueError(f'unknown experiment {experiment}')
 

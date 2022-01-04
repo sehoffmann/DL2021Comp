@@ -172,3 +172,32 @@ class UpsamplingConv(nn.Module):
         out = self.upsample(out)
         out = self.projection(out)
         return out
+
+
+
+class AffineTransform(nn.Module):
+
+    def __init__(self, interpolation_mode='bilinear', padding_mode='zeros', output_size=None):
+        super(AffineTransform, self).__init__()
+        self.interpolation_mode = interpolation_mode
+        self.padding_mode = padding_mode
+        self.output_size = output_size
+
+    
+    def forward(self, x, theta):
+        if self.output_size:
+            B,C = x.shape[:2]
+            out_size = (B, C) + self.output_size
+        else:
+            out_size = x.shape
+
+        grid = nn.functional.affine_grid(theta, out_size, align_corners=False)
+        transformed =  nn.functional.grid_sample(
+            x,
+            grid,
+            mode = self.interpolation_mode,
+            padding_mode=self.padding_mode,
+            align_corners=False
+        )
+        
+        return transformed

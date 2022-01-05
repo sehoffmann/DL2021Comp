@@ -222,6 +222,16 @@ class Autoencoder(nn.Module):
             self.linear_bn_act(bottleneck_dim, self.hidden_features)
         )
 
+        # Domain Classification
+        self.domain_classifier = nn.Sequential(
+            torch.nn.Linear(self.hidden_features, 1024),
+            torch.nn.ReLU(),
+            torch.nn.Linear(1024, 1024),
+            torch.nn.ReLU(),
+            torch.nn.Linear(1024, 1),
+            torch.nn.Sigmoid()
+        )
+
         # Decoder
         self.decoders = nn.ModuleList()
         out_channels = reversed([out_c] + blocks[:-1]) 
@@ -253,6 +263,12 @@ class Autoencoder(nn.Module):
         # Bottleneck
         out = out.reshape(-1, self.hidden_features)
         out = self.bottleneck(out)
+
+        # domain classifier
+        domain_classifier_guess = torch.flatten(self.domain_classifier(out))
+        # domain_classifier_guess = 1
+
+        # reshape for decoder
         out = out.reshape(-1, self.hidden_dim, self.hidden_res, self.hidden_res)
 
         # Decoder
@@ -269,7 +285,7 @@ class Autoencoder(nn.Module):
         if self.grayscale:
             out = out.repeat(1,3,1,1)
 
-        return out
+        return out, domain_classifier_guess
 
 
     def upsample_conv(self, in_c, out_c, kernel=None):

@@ -17,7 +17,7 @@ except ImportError:
 FLAGS = flags.FLAGS
 
 flags.DEFINE_string('default_config', 'default-cfg.yaml', 'path to the default configuration file')
-flags.DEFINE_string('config', 'experiments-cfg/baseline_0.yaml', 'experiment specific configuration file')
+flags.DEFINE_string('config', 'experiments-cfg/domain_adaption_0.yaml', 'experiment specific configuration file')
 flags.DEFINE_bool('profile', False, 'activate profiler')
 
 
@@ -34,11 +34,11 @@ def main(argv):
             logging.warning('empty experiment config')
         
     wandb.init(
-        project='dlcomp', 
-        entity='sehoffmann',
+        project='y-dlcomp', 
+        entity='ystreicher',
         config=config,
         tags = [], 
-        group = 'autoencoder'
+        group = 'domain_adaption'
     )
 
     # retrieve config from wandb, cleanup dotted named, and write it back

@@ -58,6 +58,9 @@ def experiment_from_config(cfg):
     elif experiment == 'mean_teacher':
         from dlcomp.experiments.mean_teacher import MeanTeacherLoop
         return MeanTeacherLoop(cfg)
+    elif experiment == 'domain_adaptation':
+        from dlcomp.experiments.domain_adaptation import DomainAdaptationLoop
+        return DomainAdaptationLoop(cfg)
     else:
         raise ValueError(f'unknown experiment {experiment}')
 

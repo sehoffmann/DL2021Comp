@@ -280,7 +280,7 @@ class DefaultLoop:
 
 
     def inference(self, model, X):
-        X, _ = self.prepare_batch(X, torch.Tensor(0.0))
+        X, _ = self.prepare_batch(X, torch.Tensor([0.0]))
         return model(X).detach().cpu().numpy()
 
     

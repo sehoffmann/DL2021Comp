@@ -48,3 +48,17 @@ class DomainAdaptationLoop(DefaultLoop):
         self.optimizer.step()
 
         return loss
+
+
+    def validate_step(self, model, X,Y, is_test):
+        X, Y = self.prepare_batch(X,Y)
+        pred, domain_guess = model(X)
+        if is_test:
+            return self.kaggle_loss(pred, Y)
+        else:
+            return self.loss_fn(pred, Y)
+
+    def inference(self, model, X):
+        X, _ = self.prepare_batch(X, torch.Tensor([0.0]))
+        pred, __ = model(X)
+        return pred.detach().cpu().numpy()

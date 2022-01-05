@@ -108,8 +108,8 @@ class MeanTeacherLoop(DefaultLoop):
 
 
     def _consistency_weight(self):
-        t = min(1, self.batch / self.ramp_up)  # ~55 epochs
-        sigmoid = np.exp(-10*(1-t)**2.5)  # between 0 and 1
+        t = min(1, self.batch / self.ramp_up)
+        sigmoid = np.exp(-6*(1-t)**2.5)  # between 0 and 1
         return sigmoid
 
 
@@ -123,5 +123,10 @@ class MeanTeacherLoop(DefaultLoop):
         })
         self._consistency_loss = 0
         return metrics
+
     
-    
+    @property
+    def ema_alpha(self):
+        ema_alpa =  super(MeanTeacherLoop, self).ema_alpha
+        lower_bound = 0.8
+        return lower_bound + (ema_alpa-lower_bound) * self._consistency_weight()

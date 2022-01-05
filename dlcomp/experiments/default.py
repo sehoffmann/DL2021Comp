@@ -26,6 +26,9 @@ class DefaultLoop:
             self.model_dir = cfg['out_path'] + f"/run_{time.strftime('%Y-%m-%d-%H-%M-%S', time.localtime())}"
             os.makedirs(self.model_dir)
 
+        exp_cfg = cfg['experiment']
+        self.ema_alpha = exp_cfg.pop('ema_alpha')
+
         self.augmentation = augmentation_from_config(cfg['augmentation'])
         self.train_dl, self.val_dl, self.val_dl_raw, self.test_dl = self.setup_datasets(cfg)
         self.device = cfg['device']
@@ -187,6 +190,8 @@ class DefaultLoop:
         N_batches = len(self.train_dl)
 
         self.model.train()
+        self.ema_model.train()
+
         epoch_loss = torch.tensor(0.0, device=self.device)
         for _, (X, Y) in enumerate(self.train_dl):
             self.batch += 1
@@ -206,7 +211,7 @@ class DefaultLoop:
         loss.backward()
         self.optimizer.step()
 
-        update_ema_model(self.model, self.ema_model, self.cfg['experiment']['ema_alpha'])
+        update_ema_model(self.model, self.ema_model, self.ema_alpha)
 
         return loss
 

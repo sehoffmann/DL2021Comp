@@ -38,7 +38,7 @@ def main(argv):
         entity='sehoffmann',
         config=config,
         tags = [], 
-        group = 'autoencoder'
+        group = 'mean_teacher'
     )
 
     # retrieve config from wandb, cleanup dotted named, and write it back

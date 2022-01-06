@@ -12,7 +12,7 @@ class DomainAdaptationLoop(DefaultLoop):
         self.aug_threshold = cfg['domain_adaptation']['aug_threshold']
         self.dom_lambda = cfg['domain_adaptation']['dom_lambda']
 
-        self.domain_classification_loss = torch.nn.CrossEntropyLoss()
+        self.domain_classification_loss = torch.nn.BCELoss()
 
     def step(self, X, Y):
         # N, C, H, W = X.shape

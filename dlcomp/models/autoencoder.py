@@ -224,12 +224,15 @@ class Autoencoder(nn.Module):
 
         # Domain Classification
         self.domain_classifier = nn.Sequential(
-            torch.nn.Linear(self.hidden_features, 1024),
-            torch.nn.ReLU(),
-            torch.nn.Linear(1024, 1024),
-            torch.nn.ReLU(),
-            torch.nn.Linear(1024, 1),
-            torch.nn.Sigmoid()
+            self.linear_bn_act(self.hidden_features, 1024),
+            self.linear_bn_act(1024, 1024),
+            LinearBnAct(
+                1024, 
+                1, 
+                torch.nn.Sigmoid(),
+                bn=self.bn,
+                track_running_stats=False
+            )
         )
 
         # Decoder

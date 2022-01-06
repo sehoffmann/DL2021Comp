@@ -1,0 +1,27 @@
+program: dlcomp/train.py
+command:
+  - ${env}
+  - ${interpreter}
+  - ${program}
+  - "--config"
+  - "experiments-cfg/domain_adaptation_0.yaml"
+
+method: grid
+
+metric:
+  name: best/test/ema_loss
+  goal: minimize
+
+parameters:
+
+  domain_adaptation.aug_threshold: 
+    values: 
+      - 0.6
+      - 0.7 
+      - 0.8
+  domain_adaptation.dom_lambda: 
+    values: 
+      - 0.1
+      - 1 
+      - 10 
+      - 100 

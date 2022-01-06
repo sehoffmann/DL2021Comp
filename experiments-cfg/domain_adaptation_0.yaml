@@ -22,7 +22,7 @@ model:
 augmentation: 
   name: weak2
   strength: 0.6
-  proportion: 0.8
+  proportion: 1.0 # since we do this manually for the dom. adaptation
 
 optimizer:
   name: Adam
@@ -37,3 +37,7 @@ scheduler:
 batch_size: 256
 
 loss: Kaggle
+
+domain_adaptation:
+  aug_threshold: 0.5 # probability that training sample gets augmented
+  dom_lambda: 0.1 # weight for the domain classification loss

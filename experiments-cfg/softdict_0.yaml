@@ -1,0 +1,26 @@
+experiment: 
+  name: default
+  ema_alpha: 0.98
+
+model: 
+  name: DictionaryAutoencoder
+
+
+augmentation: 
+  name: weak2
+  strength: 0.6
+  proportion: 0.8
+
+optimizer:
+  name: Adam
+  lr: 0.01
+  weight_decay: 0.01
+
+scheduler:
+  name: ExponentialLR
+  gamma: 0.995
+  
+
+batch_size: 256
+
+loss: Kaggle

@@ -43,6 +43,9 @@ def model_from_config(cfg):
     elif name == 'Autoencoder':
         from dlcomp.models.autoencoder import Autoencoder
         return Autoencoder(**kwargs)
+    elif name == 'DictionaryAutoencoder':
+        from dlcomp.models.softdict import DictionaryAutoencoder
+        return DictionaryAutoencoder(**kwargs)
     else:
         raise ValueError(f'unknown model {cfg["name"]}')
 

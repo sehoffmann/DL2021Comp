@@ -201,3 +201,28 @@ class AffineTransform(nn.Module):
         )
         
         return transformed
+
+
+
+class SoftDictionary(nn.Module):
+
+    def __init__(self, value_features, key_features, n_elements):
+        super(SoftDictionary, self).__init__()
+        
+        self.values = torch.nn.parameter.Parameter(
+            torch.normal(0,1, size=(n_elements, value_features))
+        )
+
+        self.keys = torch.nn.parameter.Parameter(
+            torch.normal(0,1, size=(n_elements, key_features))
+        )
+
+        self.softmax = nn.Softmax(dim=1)
+
+    
+    def forward(self, x):
+        logits = torch.matmul(x, self.keys.T)
+        weights = self.softmax(logits)
+        value = torch.matmul(weights, self.values)
+
+        return value

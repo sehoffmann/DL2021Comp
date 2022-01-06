@@ -1,11 +1,11 @@
 experiment: 
   name: mean_teacher
-  ema_alpha: 0.98
+  ema_alpha: 0.995
 
-  consistency_loss_scale: 2
-  trade_losses: true
-  max_trade: 0.8
-  ramp_up: 2000
+  consistency_loss_scale: 1
+  trade_losses: false
+  max_trade: 0.0
+  ramp_up: 3000
 
 
 model: 
@@ -27,20 +27,24 @@ model:
 
 
 augmentation: 
-  name: weak2
-  strength: 0.6
+  name: medium1
+  strength: 0.8
   proportion: 0.8
 
 optimizer:
   name: Adam
-  lr: 0.001
+  lr: 0.002
   weight_decay: 0.01
 
 scheduler:
   name: ExponentialLR
-  gamma: 0.999
+  gamma: 0.997
   
 
 batch_size: 256
 
 loss: Kaggle
+
+early_stopping:
+  grace: 80
+  min_delta: 10

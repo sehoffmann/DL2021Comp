@@ -79,7 +79,7 @@ class MeanTeacherLoop(DefaultLoop):
         loss.backward()
         self.optimizer.step()
 
-        update_ema_model(self.model, self.ema_model, self.cfg['experiment']['ema_alpha'])
+        update_ema_model(self.model, self.ema_model, self.ema_alpha)
 
         return loss
 
@@ -108,8 +108,8 @@ class MeanTeacherLoop(DefaultLoop):
 
 
     def _consistency_weight(self):
-        t = min(1, self.batch / self.ramp_up)  # ~55 epochs
-        sigmoid = np.exp(-10*(1-t)**2.5)  # between 0 and 1
+        t = min(1, self.batch / self.ramp_up)
+        sigmoid = np.exp(-6*(1-t)**2.5)  # between 0 and 1
         return sigmoid
 
 
@@ -123,5 +123,14 @@ class MeanTeacherLoop(DefaultLoop):
         })
         self._consistency_loss = 0
         return metrics
-    
-    
+
+
+    @property
+    def ema_alpha(self):
+        lower_bound = 0.8
+        return lower_bound + (self._ema_alpha-lower_bound) * self._consistency_weight()
+
+
+    @ema_alpha.setter
+    def ema_alpha(self, value):
+        self._ema_alpha = value

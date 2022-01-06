@@ -84,14 +84,43 @@ def _weak2(**cfg):
     return aug
     
 
+def _medium1(**cfg):
+    strength = cfg.pop('strength', 1.0)
+    proportion = cfg.pop('proportion', 1.0)
+
+    aug = iaa.Sequential([
+        iaa.Fliplr(0.5),
+        iaa.Flipud(0.5),
+        iaa.Sometimes(0.33, iaa.CoarseDropout((0.03, 0.03 + strength*0.1), size_percent=(0.05, 0.08))),
+        
+        iaa.Affine(
+            scale={"x": (1 - 0.1*strength, 1 + 0.1*strength), "y": (1 - 0.1*strength, 1 + 0.1*strength)}, 
+            rotate=(strength*-20, strength*20),
+            translate_percent={"x": (-0.1*strength, 0.1*strength), "y": (-0.1*strength, 0.1*strength)}, 
+            mode='symmetric',
+            order=3  # bicubic
+        ),
+        iaa.Sometimes(0.3*strength, iaa.GaussianBlur(sigma=(0.5, 1.0+strength*1.0))),
+        iaa.AddToHueAndSaturation((int(strength*-40), int(strength*40)), per_channel=True),
+        iaa.LogContrast(gain=(1 - strength*0.2, 1 + strength*0.2), per_channel=True)
+    ])
+
+    if proportion < 1.0:
+        aug = iaa.Sometimes(proportion, aug)
+
+    return aug
+
+
 augmentations = {
     'baseline': _baseline,
     'weak1': _weak1,
     'weak2': _weak2,
+    'medium1': _medium1,
     'to_tensor': tvt.ToTensor
 }
 
 baseline = _baseline()
 weak = _weak1()
 weak2 = _weak2()
+medium1 = _medium1()
 to_tensor = tvt.ToTensor()

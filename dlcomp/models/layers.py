@@ -1,6 +1,7 @@
 import torch
 from torch import nn
 import torch.nn.functional
+import numpy as np
 import copy
 from dlcomp.config import activation_from_config
 
@@ -206,23 +207,35 @@ class AffineTransform(nn.Module):
 
 class SoftDictionary(nn.Module):
 
-    def __init__(self, value_features, key_features, n_elements):
+    def __init__(self, d_v, d_k, n_elements):
         super(SoftDictionary, self).__init__()
         
-        self.values = torch.nn.parameter.Parameter(
-            torch.normal(0,1, size=(n_elements, value_features))
+        self.scaling_factor = torch.nn.parameter.Parameter(
+            torch.Tensor([1 / np.sqrt(d_k)]),
+            requires_grad=False 
         )
 
+        self.d_v = d_v
+        self.values = torch.nn.parameter.Parameter(
+            torch.normal(0,1, size=(n_elements, d_v))
+        )
+
+        self.d_k = d_k
         self.keys = torch.nn.parameter.Parameter(
-            torch.normal(0,1, size=(n_elements, key_features))
+            torch.normal(0,1, size=(n_elements, d_k))
         )
 
         self.softmax = nn.Softmax(dim=1)
 
     
     def forward(self, x):
+        # x: N x K
+        # keys: M x K  (transpose: K x M)
+        # -> N x M
+        # values: M x V
+
         logits = torch.matmul(x, self.keys.T)
-        weights = self.softmax(logits)
+        weights = self.softmax(logits * self.scaling_factor)
         value = torch.matmul(weights, self.values)
 
         return value

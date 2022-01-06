@@ -6,14 +6,11 @@ model:
   name: DictionaryAutoencoder
 
 
-augmentation: 
-  name: weak2
-  strength: 0.6
-  proportion: 0.8
+augmentation: identity
 
 optimizer:
   name: Adam
-  lr: 0.01
+  lr: 0.001
   weight_decay: 0.01
 
 scheduler:

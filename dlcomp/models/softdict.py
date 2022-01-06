@@ -47,7 +47,7 @@ class DictionaryAutoencoder(nn.Module):
             self.encoders.append(block)
             in_channels = n_features
 
-        self.dictionary = SoftDictionary(6*6*128, 3*3*256, 128)
+        self.dictionary = SoftDictionary(6*6*128, 3*3*256, 1024)
 
         # Decoder
         self.decoders = nn.ModuleList()

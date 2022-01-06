@@ -10,6 +10,10 @@ import torchvision.transforms as tvt
 #         CoarseDropout, Invert, ContrastNormalization, Affine, PiecewiseAffine, \
 #         ElasticTransformation
 
+def _identity():
+    return iaa.Identity()
+
+
 def _baseline():
     aug = iaa.Sequential([
         iaa.Sometimes(0.5, iaa.Affine(scale=(1.0, 1.2))),
@@ -112,6 +116,7 @@ def _medium1(**cfg):
 
 
 augmentations = {
+    'identity': _identity,
     'baseline': _baseline,
     'weak1': _weak1,
     'weak2': _weak2,

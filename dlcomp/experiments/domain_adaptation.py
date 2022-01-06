@@ -38,15 +38,15 @@ class DomainAdaptationLoop(DefaultLoop):
 
         # loss (EQ. 1)
         ## i
-        prediction_loss = self.loss_fn(pred_label, Y)
+        self._prediction_loss = self.loss_fn(pred_label, Y)
 
         ## ii
         domain_labels = np.round(should_augment)
         domain_labels = torch.tensor(domain_labels, dtype=torch.float).to(self.device, non_blocking=True)
-        domain_loss = self.domain_classification_loss(pred_domain, domain_labels) 
+        self._domain_loss = self.domain_classification_loss(pred_domain, domain_labels) 
 
         ## combination (gradient reversal layer) 
-        loss = prediction_loss - self.dom_lambda * domain_loss
+        loss = self._prediction_loss - self.dom_lambda * self._domain_loss
 
         # step
         self.optimizer.zero_grad()
@@ -68,3 +68,9 @@ class DomainAdaptationLoop(DefaultLoop):
         X, _ = self.prepare_batch(X, torch.Tensor([0.0]))
         pred, __ = model(X)
         return pred.detach().cpu().numpy()
+    
+    def update_metrics(self, metrics):
+        metrics.update({
+            'train/domain_loss': self._domain_loss,
+            'train/prediction_loss': self._prediction_loss
+        })

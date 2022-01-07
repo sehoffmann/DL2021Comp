@@ -95,7 +95,7 @@ def _weak3(**cfg):
     aug = iaa.Sequential([
         iaa.Fliplr(0.5),
         iaa.Flipud(0.5),
-        iaa.CoarseDropout((0.00, 0.03 + strength*0.1), size_percent=(0.05, 0.08)),
+        iaa.CoarseDropout((0.00, 0.05 + strength*0.5), size_percent=(0.04, 0.08)),
         iaa.Affine(
             scale={"x": (1 - 0.1*strength, 1 + 0.1*strength), "y": (1 - 0.1*strength, 1 + 0.1*strength)}, 
             translate_percent={"x": (-0.1*strength, 0.1*strength), "y": (-0.1*strength, 0.1*strength)}, 

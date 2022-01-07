@@ -15,6 +15,7 @@ model:
   skip_connections: True
   use_skip_convs: False
   residual: True
+  less_skips: True
   
   activation: ReLU
   bn: True

@@ -160,7 +160,7 @@ class DecoderBlock(nn.Module):
     def forward(self, x, skip_cons):
         out = x
         for i, layer in enumerate(self.layers):
-            if skip_cons:
+            if skip_cons and skip_cons[i] is not None:
                 s = skip_cons[i]
                 if self.skip_convs:
                     s = self.skip_convs[i](s)
@@ -182,6 +182,7 @@ class Autoencoder(nn.Module):
         self.bn = kwargs.pop('bn')
         self.grayscale = kwargs.pop('grayscale')
         self.residual = kwargs.pop('residual')
+        self.less_skips = kwargs.pop('less_skips', False)
 
         blocks = kwargs.pop('blocks')
         layers_per_block = kwargs.pop('layers_per_block')
@@ -248,6 +249,8 @@ class Autoencoder(nn.Module):
         skip_connections = []
         for enc_layer in self.encoders:
             out, skips = enc_layer(out)
+            if self.less_skips:
+                skips[:-1] = [None] * (len(skips)-1)
             skip_connections.append(skips)
         
         # Bottleneck

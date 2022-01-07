@@ -86,6 +86,34 @@ def _weak2(**cfg):
         aug = iaa.Sometimes(proportion, aug)
 
     return aug
+
+
+def _weak3(**cfg):
+    """
+    doesn't introduce artifacts or changes the "black box noise" by a lot
+    thus stays more true to the original distribution
+    """
+    strength = cfg.pop('strength', 1.0)
+    proportion = cfg.pop('proportion', 1.0)
+
+    aug = iaa.Sequential([
+        iaa.Fliplr(0.5),
+        iaa.Flipud(0.5),
+        iaa.CoarseDropout((0.00, 0.03 + strength*0.1), size_percent=(0.05, 0.08)),
+        iaa.Affine(
+            scale={"x": (1 - 0.1*strength, 1 + 0.1*strength), "y": (1 - 0.1*strength, 1 + 0.1*strength)}, 
+            translate_percent={"x": (-0.1*strength, 0.1*strength), "y": (-0.1*strength, 0.1*strength)}, 
+            mode='symmetric',
+            order=3  # bicubic
+        ),
+        iaa.MultiplySaturation((1.0 - 0.8*strength, 1.0 + 0.3*strength)),
+        iaa.AddToHue((-255, 255))
+    ])
+
+    if proportion < 1.0:
+        aug = iaa.Sometimes(proportion, aug)
+
+    return aug
     
 
 def _medium1(**cfg):
@@ -120,6 +148,7 @@ augmentations = {
     'baseline': _baseline,
     'weak1': _weak1,
     'weak2': _weak2,
+    'weak3': _weak3,
     'medium1': _medium1,
     'to_tensor': tvt.ToTensor
 }
@@ -127,5 +156,6 @@ augmentations = {
 baseline = _baseline()
 weak = _weak1()
 weak2 = _weak2()
+weak3 = _weak3()
 medium1 = _medium1()
 to_tensor = tvt.ToTensor()

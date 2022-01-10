@@ -1,5 +1,8 @@
 import wandb
 import torch
+import numpy as np
+import random
+import os
 from absl import flags, app
 
 from kaggle.api.kaggle_api_extended import KaggleApi
@@ -11,16 +14,17 @@ from dlcomp.util import set_seed
 
 FLAGS = flags.FLAGS
 
-flags.DEFINE_string('run', None, 'the id of the run to submit', required=True)
+flags.DEFINE_multi_string('runs', None, 'the id of the run to submit (or a list for ensembling)', required=True)
 flags.DEFINE_bool('infer', True, 'whether to rerun the inference')
 flags.DEFINE_integer('aug_iters', 1, 'if larger than 1, use an augmentation ensemble with that number of iterations')
 flags.DEFINE_float('aug_strength', 1, 'if using augmentation ensemble, the factor to multiply the augmentation strength by')
 flags.DEFINE_bool('save_images', False, 'whether to save inference images')
+flags.DEFINE_string('checkpoint', None, 'the checkpoint to use')
 
 
-def infer_normal(experiment, device):
+def infer_normal(experiment, outdir, device):
     return infer_and_safe(
-        experiment.model_dir, 
+        outdir, 
         experiment.test_dl, 
         experiment.ema_model, 
         device, 
@@ -28,7 +32,7 @@ def infer_normal(experiment, device):
     )
 
 
-def infer_aug_ensemble(experiment, device):
+def infer_aug_ensemble(experiment, outdir, device):
     aug_cfg = experiment.cfg['augmentation'].copy()
     if 'strength' in aug_cfg:
         strength = aug_cfg['strength']
@@ -41,7 +45,7 @@ def infer_aug_ensemble(experiment, device):
     augmentation = augmentation_from_config(aug_cfg)
 
     return infer_and_safe_ensemble(
-        experiment.model_dir, 
+        outdir, 
         experiment.test_dl, 
         augmentation, 
         experiment.ema_model, 
@@ -51,9 +55,8 @@ def infer_aug_ensemble(experiment, device):
     )
 
 
-def main(vargs):
-    api = wandb.Api()
-    run = api.run(f'sehoffmann/dlcomp/runs/{FLAGS.run}')
+def get_predictions(api, run_id, run_dir):
+    run = api.run(f'sehoffmann/dlcomp/runs/{run_id}')
     config = dict(run.config)
 
     # setup device
@@ -66,28 +69,71 @@ def main(vargs):
 
     # run inference or load cvv results
     experiment = experiment_from_config(config)
-    aug_ensemble = FLAGS.aug_iters > 1
     if FLAGS.infer:
-        best_model = run.file('models/best.pth').download(experiment.model_dir)  # io.TextIOWrapper
+        checkpoint = 'models/' + FLAGS.checkpoint if FLAGS.checkpoint else 'models/best.pth'
+        best_model = run.file(checkpoint).download(run_dir)  # io.TextIOWrapper
         experiment.restore(best_model.name)
         
-        csv_path = infer_and_safe(experiment.model_dir, experiment.test_dl, experiment.ema_model, config['device'], save_images=False)
-        if aug_ensemble:
-            csv_path = infer_aug_ensemble(experiment, config['device'])
+        if FLAGS.aug_iters > 1:
+            csv_path = infer_aug_ensemble(experiment, run_dir, config['device'])
         else:
-            csv_path = infer_normal(experiment, config['device'])
+            csv_path = infer_normal(experiment, run_dir, config['device'])
     else:
-        csv_path = run.file('kaggle_prediction.csv').download(experiment.model_dir).name
+        csv_path = run.file('kaggle_prediction.csv').download(run_dir).name
+
+    preds = np.loadtxt(csv_path, delimiter=',')[:, 1].reshape(-1, 3, 96, 96)
+    return preds
+
+
+def build_msg(api):
+    if len(FLAGS.runs) == 1:
+        run_id = FLAGS.runs[0]
+        run = api.run(f'sehoffmann/dlcomp/runs/{run_id}')
+
+        test_loss = run.summary['best/test/ema_loss']
+        msg = f'{run.name} https://wandb.ai/sehoffmann/dlcomp/runs/{run_id}'
+        
+        if FLAGS.checkpoint:
+            msg += f' {FLAGS.checkpoint}'
+        
+        msg += f' (test-loss: {test_loss:.5f})'
+    
+    else:
+        msg = f'[ensemble: ' + '  |  '.join(FLAGS.runs) + ']'
+
+    if FLAGS.aug_iters > 1:
+        msg = f'[augmentation ensemble {FLAGS.aug_iters} augstr: {FLAGS.aug_strength:.2f}] ' + msg
+    
+    return msg
+
+
+def main(vargs):
+    api = wandb.Api()
+
+    path = f'results/ensemble/{random.randint(1, 1e12):x}'
+    os.makedirs(path)
+
+    predictions = []
+    for run_id in FLAGS.runs:
+        run_path = path + f'/{run_id}'
+        os.mkdir(run_path)
+        predictions += [get_predictions(api, run_id, run_path)]
+
+    predictions = np.mean(predictions, axis=0)
+
+    # save as csv
+    flattened = predictions.flatten()[:, None]
+    indices = np.arange(len(flattened))[:, None]
+    csv_data = np.concatenate([indices, flattened], axis=1)
+    csv_path = path + '/predictions.csv'
+    np.savetxt(csv_path, csv_data, delimiter=",", header='Id,Value', fmt='%d,%f')
 
     # submit to kaggle
     kaggle_api = KaggleApi()
     kaggle_api.authenticate()
 
-    test_loss = run.summary['best/test/ema_loss']
-    msg = f'{run.name} https://wandb.ai/sehoffmann/dlcomp/runs/{FLAGS.run} (test-loss: {test_loss:.5f})'
-    if aug_ensemble:
-        msg = f'[augmentation ensemble {FLAGS.aug_iters} augstr: {FLAGS.aug_strength:.2f}] ' + msg
-    kaggle_api.competition_submit(csv_path, msg, 'uni-tuebingen-deep-learning-2021')
+    msg = build_msg(api)
+    #kaggle_api.competition_submit(csv_path, msg, 'uni-tuebingen-deep-learning-2021')
 
 
 if __name__ == '__main__':

@@ -44,8 +44,8 @@ class DefaultLoop:
         self.optimizer = optimizer_from_config(cfg['optimizer'], self.model.parameters())
         self.scheduler = scheduler_from_config(cfg['scheduler'], self.optimizer) if 'scheduler' in cfg else None
 
-        self.loss_fn = loss_from_config(cfg['loss'])
-        self.kaggle_loss = KaggleLoss()
+        self.loss_fn = loss_from_config(cfg['loss']).to(self.device)
+        self.kaggle_loss = KaggleLoss().to(self.device)
 
         if wandb.run:
             self.setup_wandb()

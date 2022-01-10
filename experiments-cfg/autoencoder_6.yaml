@@ -1,0 +1,45 @@
+experiment: 
+  name: default
+  ema_alpha: 0.99
+
+model: 
+  name: Autoencoder
+  blocks:
+    - 128
+    - 256
+    - 256
+    - 256
+    - 512
+  layers_per_block: 2
+  bottleneck_dim: 256
+  skip_connections: True
+  use_skip_convs: False
+  residual: True
+  less_skips: True
+  
+  activation: ReLU
+  bn: True
+  grayscale: False
+
+
+augmentation: 
+  name: weak3
+  strength: 0.6
+  proportion: 0.8
+
+optimizer:
+  name: Adam
+  lr: 0.001
+  weight_decay: 0.01
+
+scheduler:
+  name: ExponentialLR
+  gamma: 0.999
+  
+
+batch_size: 256
+
+loss:
+  name: Bootstrap
+  p: 0.5
+  

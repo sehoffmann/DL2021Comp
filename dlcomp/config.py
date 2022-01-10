@@ -3,7 +3,7 @@ from torch import nn
 import inspect
 
 import dlcomp.augmentations as aug
-from dlcomp.losses import KaggleLoss
+from dlcomp.losses import BootstrapLoss, KaggleLoss
 
 
 def remove_name(cfg):
@@ -113,5 +113,7 @@ def loss_from_config(cfg):
         return nn.MSELoss(**kwargs)
     elif name == 'Kaggle':
         return KaggleLoss(**kwargs)
+    elif name == 'Bootstrap':
+        return BootstrapLoss(**kwargs)
     else:
         raise ValueError(f'unknown loss function {name}')

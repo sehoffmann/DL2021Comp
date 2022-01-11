@@ -334,7 +334,7 @@ class RefineNet(nn.Module):
         super(RefineNet, self).__init__()
 
         self.model1 = Autoencoder(
-            out_c=64,
+            out_c=128,
             activation = cfg['activation'],
             bn=True,
             residual=True,
@@ -345,12 +345,12 @@ class RefineNet(nn.Module):
             use_skip_convs=cfg['use_skip_convs'],
             bottleneck_dim = cfg['bottleneck_dim'] // 2,  
             blocks = [n_channels // 2 for n_channels in cfg['blocks']],
-            raw=False
+            raw=True
         )
 
         self.model2 = Autoencoder(
-            in_c=64+3,
-            out_c=64,
+            in_c=128+3,
+            out_c=128,
             activation = cfg['activation'],
             bn=True,
             residual=True,
@@ -367,11 +367,11 @@ class RefineNet(nn.Module):
         act = activation_from_config(cfg['activation'])
 
         self.conv1 = ConvBnAct(
-            64, 64, kernel=3, stride=1, padding=1, activation=act, bn=True, track_running_stats=False
+            128, 128, kernel=3, stride=1, padding=1, activation=act, bn=True, track_running_stats=False
         )
 
         self.conv2 = ConvBnAct(
-            64, 3, kernel=9, stride=1, padding=4, activation=nn.Sigmoid(), bn=False
+            128, 3, kernel=9, stride=1, padding=4, activation=nn.Sigmoid(), bn=False
         )
 
 

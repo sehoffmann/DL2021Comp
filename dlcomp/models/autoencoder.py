@@ -345,7 +345,7 @@ class RefineNet(nn.Module):
             use_skip_convs=cfg['use_skip_convs'],
             bottleneck_dim = cfg['bottleneck_dim'] // 2,  
             blocks = [n_channels // 2 for n_channels in cfg['blocks']],
-            raw=True
+            raw=False
         )
 
         self.model2 = Autoencoder(
@@ -364,8 +364,10 @@ class RefineNet(nn.Module):
             raw=True
         )
 
+        act = activation_from_config(cfg['activation'])
+
         self.conv1 = ConvBnAct(
-            64, 64, kernel=3, stride=1, padding=0, activation=cfg['activation'], bn=True, track_running_stats=False
+            64, 64, kernel=3, stride=1, padding=1, activation=act, bn=True, track_running_stats=False
         )
 
         self.conv2 = ConvBnAct(
@@ -377,6 +379,6 @@ class RefineNet(nn.Module):
         preds1 = self.model1(x)
         stacked = torch.cat([x, preds1], dim=1)
         preds2 = self.model2(stacked)
-        out = self.conv1(preds2)
+        out = self.conv1(preds1 + preds2)
         out = self.conv2(out)
         return out

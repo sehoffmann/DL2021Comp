@@ -172,7 +172,7 @@ class DecoderBlock(nn.Module):
 
 class Autoencoder(nn.Module):
 
-    def __init__(self, **kwargs):
+    def __init__(self, in_c=3, out_c=3, raw=False, **kwargs):
         super(Autoencoder, self).__init__()
 
         self.kernel = kwargs.pop('kernel', 3)
@@ -183,15 +183,13 @@ class Autoencoder(nn.Module):
         self.grayscale = kwargs.pop('grayscale')
         self.residual = kwargs.pop('residual')
         self.less_skips = kwargs.pop('less_skips', False)
+        self.raw = raw
 
         blocks = kwargs.pop('blocks')
         layers_per_block = kwargs.pop('layers_per_block')
 
         use_skip_convs = kwargs.pop('use_skip_convs')
         bottleneck_dim = kwargs.pop('bottleneck_dim')
-
-        in_c = 3
-        out_c = 1 if self.grayscale else 3
 
         # Input Shape: 3 x 96 x 96
         size = 96
@@ -266,7 +264,8 @@ class Autoencoder(nn.Module):
             else:
                 out = dec_layer(out, None)
         
-        out = self.out_act(out)
+        if not self.raw:
+            out = self.out_act(out)
 
         # Grayscale -> RGB
         if self.grayscale:
@@ -326,3 +325,58 @@ class Autoencoder(nn.Module):
             bn=self.bn,
             track_running_stats=False
         )
+
+
+
+class RefineNet(nn.Module):
+
+    def __init__(self, **cfg):
+        super(RefineNet, self).__init__()
+
+        self.model1 = Autoencoder(
+            out_c=64,
+            activation = cfg['activation'],
+            bn=True,
+            residual=True,
+            grayscale=False,
+            less_skips=cfg['less_skips'],
+            skip_connections=True,
+            layers_per_block=cfg['layers_per_block'],
+            use_skip_convs=cfg['use_skip_convs'],
+            bottleneck_dim = cfg['bottleneck_dim'] // 2,  
+            blocks = [n_channels // 2 for n_channels in cfg['blocks']],
+            raw=True
+        )
+
+        self.model2 = Autoencoder(
+            in_c=64+3,
+            out_c=64,
+            activation = cfg['activation'],
+            bn=True,
+            residual=True,
+            grayscale=False,
+            less_skips=cfg['less_skips'],
+            skip_connections=True,
+            layers_per_block=cfg['layers_per_block'],
+            use_skip_convs=cfg['use_skip_convs'],
+            bottleneck_dim = cfg['bottleneck_dim'],  
+            blocks = cfg['blocks'],
+            raw=True
+        )
+
+        self.conv1 = ConvBnAct(
+            64, 64, kernel=3, stride=1, padding=0, activation=cfg['activation'], bn=True, track_running_stats=False
+        )
+
+        self.conv2 = ConvBnAct(
+            64, 3, kernel=9, stride=1, padding=4, activation=nn.Sigmoid(), bn=False
+        )
+
+
+    def forward(self, x):
+        preds1 = self.model1(x)
+        stacked = torch.cat([x, preds1], dim=1)
+        preds2 = self.model2(stacked)
+        out = self.conv1(preds2)
+        out = self.conv2(out)
+        return out

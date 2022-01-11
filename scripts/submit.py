@@ -14,7 +14,7 @@ from dlcomp.util import set_seed
 
 FLAGS = flags.FLAGS
 
-flags.DEFINE_multi_string('runs', None, 'the id of the run to submit (or a list for ensembling)', required=True)
+flags.DEFINE_spaceseplist('runs', None, 'the id of the run to submit (or a list for ensembling)', required=True)
 flags.DEFINE_bool('infer', True, 'whether to rerun the inference')
 flags.DEFINE_integer('aug_iters', 1, 'if larger than 1, use an augmentation ensemble with that number of iterations')
 flags.DEFINE_float('aug_strength', 1, 'if using augmentation ensemble, the factor to multiply the augmentation strength by')
@@ -133,7 +133,7 @@ def main(vargs):
     kaggle_api.authenticate()
 
     msg = build_msg(api)
-    #kaggle_api.competition_submit(csv_path, msg, 'uni-tuebingen-deep-learning-2021')
+    kaggle_api.competition_submit(csv_path, msg, 'uni-tuebingen-deep-learning-2021')
 
 
 if __name__ == '__main__':

@@ -3,23 +3,20 @@ experiment:
   ema_alpha: 0.99
 
 model: 
-  name: Autoencoder
+  name: RefineNet
   blocks:
     - 128
     - 256
     - 256
     - 256
-    - 512
+    - 256
   layers_per_block: 2
   bottleneck_dim: 256
   skip_connections: True
   use_skip_convs: False
-  residual: True
   less_skips: True
   
   activation: ReLU
-  bn: True
-  grayscale: False
 
 
 augmentation: 
@@ -37,7 +34,7 @@ scheduler:
   gamma: 0.999
   
 
-batch_size: 256
+batch_size: 128
 
 loss:
   name: Bootstrap

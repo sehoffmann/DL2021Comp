@@ -49,6 +49,9 @@ def model_from_config(cfg):
     elif name == 'RefineNet':
         from dlcomp.models.autoencoder import RefineNet
         return RefineNet(**kwargs)
+    elif name == 'AutoencoderWithTail':
+        from dlcomp.models.autoencoder import AutoencoderWithTail
+        return AutoencoderWithTail(**kwargs)
     else:
         raise ValueError(f'unknown model {cfg["name"]}')
 

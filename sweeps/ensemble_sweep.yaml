@@ -1,0 +1,53 @@
+program: dlcomp/train.py
+command:
+  - ${env}
+  - ${interpreter}
+  - ${program}
+  - "--config"
+  - "experiments-cfg/refinenet_0.yaml"
+
+method: random
+
+metric:
+  name: best/test/ema_loss
+  goal: minimize
+
+parameters:
+
+  seed:
+    distribution: uniform
+    min: 1111111111111111
+    max: 9999999999999999
+
+  validation_split:
+    distribution: constant
+    value: 0.02
+  
+  early_stopping.grace:
+    distribution: constant
+    value: 9999
+
+  epochs:
+    distribution: constant
+    value: 270
+
+  augmentation.strength:
+    distribution: normal
+    mu: 0.6
+    sigma: 0.001
+
+  
+  augmentation.proportion:
+    distribution: uniform
+    min: 0.65
+    max: 0.95
+  
+
+  model.bottleneck_dim:
+    distribution: uniform
+    min: 245
+    max: 265
+
+  save_every: 
+    distribution: constant
+    value: 9999

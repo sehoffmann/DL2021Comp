@@ -334,7 +334,7 @@ class RefineNet(nn.Module):
         super(RefineNet, self).__init__()
 
         self.model1 = Autoencoder(
-            out_c=128,
+            out_c=64,
             activation = cfg['activation'],
             bn=True,
             residual=True,
@@ -345,12 +345,12 @@ class RefineNet(nn.Module):
             use_skip_convs=cfg['use_skip_convs'],
             bottleneck_dim = cfg['bottleneck_dim'] // 2,  
             blocks = [n_channels // 2 for n_channels in cfg['blocks']],
-            raw=True
+            raw=False
         )
 
         self.model2 = Autoencoder(
-            in_c=128+3,
-            out_c=128,
+            in_c=64+3,
+            out_c=64,
             activation = cfg['activation'],
             bn=True,
             residual=True,
@@ -367,11 +367,11 @@ class RefineNet(nn.Module):
         act = activation_from_config(cfg['activation'])
 
         self.conv1 = ConvBnAct(
-            128, 128, kernel=3, stride=1, padding=1, activation=act, bn=True, track_running_stats=False
+            64, 64, kernel=3, stride=1, padding=1, activation=act, bn=True, track_running_stats=False
         )
 
         self.conv2 = ConvBnAct(
-            128, 3, kernel=9, stride=1, padding=4, activation=nn.Sigmoid(), bn=False
+            64, 3, kernel=9, stride=1, padding=4, activation=nn.Sigmoid(), bn=False
         )
 
 
@@ -381,4 +381,37 @@ class RefineNet(nn.Module):
         preds2 = self.model2(stacked)
         out = self.conv1(preds1 + preds2)
         out = self.conv2(out)
+        return out
+
+
+class AutoencoderWithTail(nn.Module):
+
+    def __init__(self, **cfg):
+        super(AutoencoderWithTail, self).__init__()
+
+
+        act = activation_from_config(cfg['activation'])
+        tail_features = cfg.pop('tail')
+
+        self.autoencoder = Autoencoder(
+            raw=True,
+            out_c = cfg['blocks'][0],
+            **cfg
+        )
+
+        tail_layers = []
+        in_features = [cfg['blocks'][0]] + tail_features[:-1]
+        out_features = tail_features[1:] + [3]
+        for c_in, c_out in zip(in_features, out_features):
+            conv = ResidualBlock(
+                c_in, c_out, kernel=7, stride=1, padding=3, activation=act, bn=True, track_running_stats=False
+            )
+            tail_layers += [conv]
+
+        self.tail = nn.Sequential(*tail_layers)
+
+
+    def forward(self, x):
+        out = self.autoencoder(x)
+        out = self.tail(out)
         return out
